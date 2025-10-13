@@ -31,6 +31,7 @@ export default class BaseLayout extends React.Component {
     const SchemesContainer = getComponent("SchemesContainer", true)
     const AuthorizeBtnContainer = getComponent("AuthorizeBtnContainer", true)
     const FilterContainer = getComponent("FilterContainer", true)
+    const TagsBadges = getComponent("TagsBadges", true)
     const isSwagger2 = specSelectors.isSwagger2()
     const isOAS3 = specSelectors.isOAS3()
     const isOAS31 = specSelectors.isOAS31()
@@ -122,6 +123,15 @@ export default class BaseLayout extends React.Component {
               </Col>
             </div>
           ) : null}
+
+          {/* <hr className="section-separator" /> */}
+          <Row className="tags-badges-container">
+            <Col mobile={12}>
+              <TagsBadges />
+            </Col>
+          </Row>
+          <hr className="section-separator" />
+
 
           <FilterContainer />
 

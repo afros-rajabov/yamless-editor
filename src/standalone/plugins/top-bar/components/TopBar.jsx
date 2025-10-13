@@ -41,6 +41,51 @@ class TopBar extends React.Component {
     this.props.specActions.download(url)
   }
 
+  downloadCurrentSpec = () => {
+    const { specSelectors } = this.props
+    try {
+      let specText = specSelectors.specStr()
+      if(!specText) {
+        const specJson = specSelectors.specJson()
+        if(specJson && typeof specJson.toJS === "function") {
+          specText = JSON.stringify(specJson.toJS(), null, 2)
+        }
+      }
+      if(!specText) {
+        return
+      }
+      const url = this.props.specSelectors.url()
+      const fallbackName = "openapi.json"
+      let filename = fallbackName
+      try {
+        if(url) {
+          const parsed = new window.URL(url, window.location.href)
+          const pathname = parsed.pathname || ""
+          const last = pathname.split("/").filter(Boolean).pop()
+          if(last && /\.ya?ml$/i.test(last)) {
+            filename = last.replace(/\.ya?ml$/i, ".json")
+          } else if(last && /\.json$/i.test(last)) {
+            filename = last
+          }
+        }
+      } catch(e) {
+        // ignore filename parsing errors and use fallback
+      }
+
+      const blob = new Blob([specText], { type: "application/json;charset=utf-8" })
+      const blobUrl = window.URL.createObjectURL(blob)
+      const a = document.createElement("a")
+      a.href = blobUrl
+      a.download = filename
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      window.URL.revokeObjectURL(blobUrl)
+    } catch (e) {
+      // no-op on failure
+    }
+  }
+
   onUrlSelect =(e)=> {
     let url = e.target.value || e.target.href
     this.loadSpec(url)
@@ -164,6 +209,7 @@ class TopBar extends React.Component {
             <form className="download-url-wrapper" onSubmit={formOnSubmit}>
               {control.map((el, i) => cloneElement(el, { key: i }))}
             </form>
+            <Button className="download-spec-button" onClick={ this.downloadCurrentSpec }>Download JSON</Button>
           </div>
         </div>
       </div>
