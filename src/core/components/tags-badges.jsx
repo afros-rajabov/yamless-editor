@@ -7,6 +7,9 @@ export default class TagsBadges extends React.Component {
     specSelectors: PropTypes.object.isRequired,
     specActions: PropTypes.object.isRequired,
     getComponent: PropTypes.func.isRequired,
+    // optional: provided by parent layout for controlling tag open/close state
+    layoutSelectors: PropTypes.object,
+    layoutActions: PropTypes.object,
   }
 
   constructor(props) {
@@ -15,7 +18,7 @@ export default class TagsBadges extends React.Component {
   }
 
   render() {
-    const { specSelectors, specActions, getComponent } = this.props
+    const { specSelectors, specActions, getComponent, layoutSelectors, layoutActions } = this.props
     const tags = specSelectors.tags()
     const Button = getComponent && getComponent("Button")
     const CloseIcon = getComponent && getComponent("CloseIcon")
@@ -51,16 +54,29 @@ export default class TagsBadges extends React.Component {
       }
     }
 
+    const onBadgeClick = (name) => {
+      if(!layoutActions || !layoutSelectors) return
+      // open clicked tag and close all others
+      if(tags && tags.forEach) {
+        tags.forEach(t => {
+          const n = t && t.get && t.get("name")
+          if(!n) return
+          layoutActions.show(["operations-tag", n], n === name)
+        })
+      }
+    }
+
     return (
       <div>
         <h1 className="tags-badges-title">Tags</h1>
         <div className="tags-badges">
           {tags.map((tag, idx) => {
             const name = tag.get("name")
+            const anchorName = name.replace(/ /g, "_")
             if(!name) return null
-            const anchor = `#operations-tag-${encodeURIComponent(name)}`
+            const anchor = `#operations-tag-${anchorName}`
             return (
-              <a key={name + idx} className="tag-badge tag-badge--link" href={anchor}>{name}</a>
+              <a key={name + idx} className="tag-badge tag-badge--link" href={anchor} onClick={() => onBadgeClick(name)}>{name}</a>
             )
           }).toArray()}
           <button type="button" className="tag-badge tag-badge--link tag-badge--button" onClick={openDialog}>+ Add</button>

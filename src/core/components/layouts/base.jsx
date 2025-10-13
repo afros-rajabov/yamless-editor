@@ -9,6 +9,9 @@ export default class BaseLayout extends React.Component {
     errSelectors: PropTypes.object.isRequired,
     errActions: PropTypes.object.isRequired,
     specSelectors: PropTypes.object.isRequired,
+    // layout props may be injected by the container; keep optional for safety
+    layoutSelectors: PropTypes.object,
+    layoutActions: PropTypes.object,
     oas3Selectors: PropTypes.object.isRequired,
     oas3Actions: PropTypes.object.isRequired,
     getComponent: PropTypes.func.isRequired,
@@ -127,7 +130,7 @@ export default class BaseLayout extends React.Component {
           {/* <hr className="section-separator" /> */}
           <Row className="tags-badges-container">
             <Col mobile={12}>
-              <TagsBadges />
+              <TagsBadges layoutSelectors={this.props.layoutSelectors} layoutActions={this.props.layoutActions} />
             </Col>
           </Row>
           <hr className="section-separator" />
