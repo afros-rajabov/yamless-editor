@@ -60,6 +60,7 @@ import DeepLink from "core/components/deep-link"
 import SvgAssets from "core/components/svg-assets"
 import Markdown from "core/components/providers/markdown"
 import BaseLayout from "core/components/layouts/base"
+import TagsBadges from "core/components/tags-badges"
 
 const CoreComponentsPlugin = () => ({
   components: {
@@ -110,6 +111,7 @@ const CoreComponentsPlugin = () => ({
     TryItOutButton,
     Markdown,
     BaseLayout,
+    TagsBadges,
     VersionPragmaFilter,
     VersionStamp,
     OperationExt,

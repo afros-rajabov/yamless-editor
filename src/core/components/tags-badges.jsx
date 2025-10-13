@@ -1,0 +1,114 @@
+import React from "react"
+import PropTypes from "prop-types"
+
+export default class TagsBadges extends React.Component {
+
+  static propTypes = {
+    specSelectors: PropTypes.object.isRequired,
+    specActions: PropTypes.object.isRequired,
+    getComponent: PropTypes.func.isRequired,
+  }
+
+  constructor(props) {
+    super(props)
+    this.state = { showDialog: false, newTagName: "", newTagDescription: "" }
+  }
+
+  render() {
+    const { specSelectors, specActions, getComponent } = this.props
+    const tags = specSelectors.tags()
+    const Button = getComponent && getComponent("Button")
+    const CloseIcon = getComponent && getComponent("CloseIcon")
+
+    if(!tags || tags.size === 0) {
+      return null
+    }
+
+    const openDialog = () => this.setState({ showDialog: true, newTagName: "", newTagDescription: "" })
+    const closeDialog = () => this.setState({ showDialog: false, newTagName: "", newTagDescription: "" })
+    const onNameChange = (e) => this.setState({ newTagName: e.target.value })
+    const onDescChange = (e) => this.setState({ newTagDescription: e.target.value })
+
+    const onAddTag = () => {
+      const name = (this.state.newTagName || "").trim()
+      const description = (this.state.newTagDescription || "").trim()
+      if(!name) return
+      const existing = tags && tags.find ? tags.find(t => t && t.get && t.get("name") === name) : null
+      if(existing) { closeDialog(); return }
+      try {
+        const spec = specSelectors.specJson()
+        const js = spec && typeof spec.toJS === "function" ? spec.toJS() : {}
+        const next = { ...js }
+        const list = Array.isArray(next.tags) ? next.tags.slice() : []
+        const newTag = description ? { name, description } : { name }
+        list.push(newTag)
+        next.tags = list
+        const asString = JSON.stringify(next, null, 2)
+        specActions.updateSpec(asString)
+        closeDialog()
+      } catch (e) {
+        // no-op
+      }
+    }
+
+    return (
+      <div>
+        <h1 className="tags-badges-title">Tags</h1>
+        <div className="tags-badges">
+          {tags.map((tag, idx) => {
+            const name = tag.get("name")
+            if(!name) return null
+            const anchor = `#operations-tag-${encodeURIComponent(name)}`
+            return (
+              <a key={name + idx} className="tag-badge tag-badge--link" href={anchor}>{name}</a>
+            )
+          }).toArray()}
+          <button type="button" className="tag-badge tag-badge--link tag-badge--button" onClick={openDialog}>+ Add</button>
+        </div>
+
+        {this.state.showDialog ? (
+          <div className="dialog-ux">
+            <div className="backdrop-ux" onClick={closeDialog}></div>
+            <div className="modal-ux">
+              <div className="modal-dialog-ux">
+                <div className="modal-ux-inner">
+                  <div className="modal-ux-header">
+                    <h3>Add tag</h3>
+                    <button type="button" className="close-modal" onClick={ closeDialog }>
+                      {CloseIcon ? <CloseIcon /> : "✕"}
+                    </button>
+                  </div>
+                  <div className="modal-ux-content">
+                    <div className="form-field">
+                      <label className="form-label" htmlFor="new-tag-input">Tag name</label>
+                      <input className="form-input" id="new-tag-input" type="text" value={this.state.newTagName} onChange={onNameChange} />
+                    </div>
+                    <div className="form-field">
+                      <label className="form-label" htmlFor="new-tag-desc">Description (optional)</label>
+                      <textarea className="form-textarea" id="new-tag-desc" rows="3" value={this.state.newTagDescription} onChange={onDescChange} />
+                    </div>
+                    <div className="modal-actions-row">
+                      {Button ? (
+                        <>
+                          <Button className="btn modal-btn" onClick={closeDialog}>Cancel</Button>
+                          <Button className="btn modal-btn" onClick={onAddTag}>Add</Button>
+                        </>
+                      ) : (
+                        <>
+                          <button className="btn modal-btn" onClick={closeDialog}>Cancel</button>
+                          <button className="btn modal-btn" onClick={onAddTag}>Add</button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : null}
+      </div>
+    )
+  }
+}
+
+
