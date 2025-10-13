@@ -754,11 +754,13 @@ section.tags-section {
 }
 
 .tag-badge {
+  // border: 1px solid $btn-border-color;
   display: inline-block;
   padding: 8px 14px;
-  border-radius: 8px;
-  background: #e8eef3;
-  color: #244a66;
+  border-radius: 4px;
+  background-color: #0000000d;
+  box-shadow: 0 1px 2px rgba($btn-box-shadow-color, 0.1);
+  color: #505050;
   font-weight: 600;
   font-size: 20px;
 }

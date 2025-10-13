@@ -99,8 +99,7 @@ export default class TagsBadges extends React.Component {
           </button>
         </h3>
 
-        {Collapse ? (
-          <Collapse isOpened={!!isSectionOpen}>
+        <Collapse isOpened={!!isSectionOpen}>
             <div className="tags-badges">
               {tags.map((tag, idx) => {
                 const name = tag.get("name")
@@ -111,23 +110,10 @@ export default class TagsBadges extends React.Component {
                   <a key={name + idx} className="tag-badge tag-badge--link" href={anchor} onClick={() => onBadgeClick(name)}>{name}</a>
                 )
               }).toArray()}
-              <button type="button" className="tag-badge tag-badge--link tag-badge--button" onClick={openDialog}>+ Add</button>
+              {/* <button className="btn" onClick={openDialog}>Add</button> */}
             </div>
-          </Collapse>
-        ) : (
-          <div className="tags-badges">
-            {tags.map((tag, idx) => {
-              const name = tag.get("name")
-              const anchorName = name.replace(/ /g, "_")
-              if(!name) return null
-              const anchor = `#operations-tag-${anchorName}`
-              return (
-                <a key={name + idx} className="tag-badge tag-badge--link" href={anchor} onClick={() => onBadgeClick(name)}>{name}</a>
-              )
-            }).toArray()}
-            <button type="button" className="tag-badge tag-badge--link tag-badge--button" onClick={openDialog}>+ Add</button>
-          </div>
-        )}
+            <button className="btn" onClick={openDialog}>Add</button>
+        </Collapse>
 
       </section>
       {this.state.showDialog ? (
