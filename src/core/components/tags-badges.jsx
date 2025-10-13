@@ -22,6 +22,9 @@ export default class TagsBadges extends React.Component {
     const tags = specSelectors.tags()
     const Button = getComponent && getComponent("Button")
     const CloseIcon = getComponent && getComponent("CloseIcon")
+    const Collapse = getComponent && getComponent("Collapse")
+    const ArrowUpIcon = getComponent && getComponent("ArrowUpIcon")
+    const ArrowDownIcon = getComponent && getComponent("ArrowDownIcon")
 
     if(!tags || tags.size === 0) {
       return null
@@ -31,6 +34,15 @@ export default class TagsBadges extends React.Component {
     const closeDialog = () => this.setState({ showDialog: false, newTagName: "", newTagDescription: "" })
     const onNameChange = (e) => this.setState({ newTagName: e.target.value })
     const onDescChange = (e) => this.setState({ newTagDescription: e.target.value })
+
+    // fold/unfold entire tags section
+    const sectionShownKey = ["tags-badges", "section"]
+    const isSectionOpen = layoutSelectors && layoutSelectors.isShown ? layoutSelectors.isShown(sectionShownKey, true) : true
+    const toggleSection = () => {
+      if(layoutActions && layoutActions.show) {
+        layoutActions.show(sectionShownKey, !isSectionOpen)
+      }
+    }
 
     const onAddTag = () => {
       const name = (this.state.newTagName || "").trim()
@@ -67,20 +79,54 @@ export default class TagsBadges extends React.Component {
     }
 
     return (
-      <div>
-        <h1 className="tags-badges-title">Tags</h1>
-        <div className="tags-badges">
-          {tags.map((tag, idx) => {
-            const name = tag.get("name")
-            const anchorName = name.replace(/ /g, "_")
-            if(!name) return null
-            const anchor = `#operations-tag-${anchorName}`
-            return (
-              <a key={name + idx} className="tag-badge tag-badge--link" href={anchor} onClick={() => onBadgeClick(name)}>{name}</a>
-            )
-          }).toArray()}
-          <button type="button" className="tag-badge tag-badge--link tag-badge--button" onClick={openDialog}>+ Add</button>
-        </div>
+      <div className={isSectionOpen ? "opblock-tag-section is-open" : "opblock-tag-section"}>
+        <h3
+          onClick={toggleSection}
+          className="opblock-tag no-desc"
+          data-tag="Tags"
+          data-is-open={!!isSectionOpen}
+        >
+          <span>Tags</span>
+          <button
+            aria-expanded={!!isSectionOpen}
+            className="expand-operation"
+            title={isSectionOpen ? "Collapse operation" : "Expand operation"}
+            onClick={toggleSection}
+          >
+            {isSectionOpen && ArrowUpIcon ? <ArrowUpIcon className="arrow" /> : null}
+            {!isSectionOpen && ArrowDownIcon ? <ArrowDownIcon className="arrow" /> : null}
+          </button>
+        </h3>
+
+        {Collapse ? (
+          <Collapse isOpened={!!isSectionOpen}>
+            <div className="tags-badges">
+              {tags.map((tag, idx) => {
+                const name = tag.get("name")
+                const anchorName = name.replace(/ /g, "_")
+                if(!name) return null
+                const anchor = `#operations-tag-${anchorName}`
+                return (
+                  <a key={name + idx} className="tag-badge tag-badge--link" href={anchor} onClick={() => onBadgeClick(name)}>{name}</a>
+                )
+              }).toArray()}
+              <button type="button" className="tag-badge tag-badge--link tag-badge--button" onClick={openDialog}>+ Add</button>
+            </div>
+          </Collapse>
+        ) : (
+          <div className="tags-badges">
+            {tags.map((tag, idx) => {
+              const name = tag.get("name")
+              const anchorName = name.replace(/ /g, "_")
+              if(!name) return null
+              const anchor = `#operations-tag-${anchorName}`
+              return (
+                <a key={name + idx} className="tag-badge tag-badge--link" href={anchor} onClick={() => onBadgeClick(name)}>{name}</a>
+              )
+            }).toArray()}
+            <button type="button" className="tag-badge tag-badge--link tag-badge--button" onClick={openDialog}>+ Add</button>
+          </div>
+        )}
 
         {this.state.showDialog ? (
           <div className="dialog-ux">
