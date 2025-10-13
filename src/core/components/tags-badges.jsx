@@ -79,7 +79,7 @@ export default class TagsBadges extends React.Component {
     }
 
     return (
-      <div className={isSectionOpen ? "opblock-tag-section is-open" : "opblock-tag-section"}>
+      <section className={isSectionOpen ? "opblock-tag-section tags-section is-open" : "opblock-tag-section tags-section"}>
         <h3
           onClick={toggleSection}
           className="opblock-tag no-desc"
@@ -168,7 +168,7 @@ export default class TagsBadges extends React.Component {
             </div>
           </div>
         ) : null}
-      </div>
+      </section>
     )
   }
 }

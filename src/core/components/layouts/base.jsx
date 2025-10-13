@@ -127,13 +127,12 @@ export default class BaseLayout extends React.Component {
             </div>
           ) : null}
 
-          {/* <hr className="section-separator" /> */}
           <Row className="tags-badges-container">
             <Col mobile={12}>
               <TagsBadges layoutSelectors={this.props.layoutSelectors} layoutActions={this.props.layoutActions} />
             </Col>
           </Row>
-          <hr className="section-separator" />
+          {/* <hr className="section-separator" /> */}
 
 
           <FilterContainer />
