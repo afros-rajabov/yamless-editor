@@ -8,6 +8,7 @@ import CloseIcon from "./components/close"
 import CopyIcon from "./components/copy"
 import LockIcon from "./components/lock"
 import UnlockIcon from "./components/unlock"
+import TrashIcon from "./components/trash"
 
 const IconsPlugin = () => ({
   components: {
@@ -18,6 +19,7 @@ const IconsPlugin = () => ({
     CopyIcon,
     LockIcon,
     UnlockIcon,
+    TrashIcon,
   },
 })
 

@@ -60,6 +60,8 @@ export default class Operations extends React.Component {
         layoutActions={layoutActions}
         getConfigs={getConfigs}
         getComponent={getComponent}
+        specSelectors={specSelectors}
+        specActions={this.props.specActions}
         specUrl={specSelectors.url()}>
         <div className="operation-tag-content">
           {

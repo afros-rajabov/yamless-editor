@@ -25,6 +25,8 @@ export default class OperationTag extends React.Component {
     getConfigs: PropTypes.func.isRequired,
     getComponent: PropTypes.func.isRequired,
 
+    specSelectors: PropTypes.object.isRequired,
+    specActions: PropTypes.object.isRequired,
     specUrl: PropTypes.string.isRequired,
 
     children: PropTypes.element,
@@ -40,6 +42,8 @@ export default class OperationTag extends React.Component {
       layoutActions,
       getConfigs,
       getComponent,
+      specSelectors,
+      specActions,
       specUrl,
     } = this.props
 
@@ -54,6 +58,7 @@ export default class OperationTag extends React.Component {
     const Link = getComponent("Link")
     const ArrowUpIcon = getComponent("ArrowUpIcon")
     const ArrowDownIcon = getComponent("ArrowDownIcon")
+    const TrashIcon = getComponent("TrashIcon")
 
     let tagDescription = tagObj.getIn(["tagDetails", "description"], null)
     let tagExternalDocsDescription = tagObj.getIn(["tagDetails", "externalDocs", "description"])
@@ -67,6 +72,27 @@ export default class OperationTag extends React.Component {
 
     let isShownKey = ["operations-tag", tag]
     let showTag = layoutSelectors.isShown(isShownKey, docExpansion === "full" || docExpansion === "list")
+
+    const operations = tagObj.get("operations")
+    const isEmptyTag = !operations || operations.size === 0
+
+    const onDeleteTag = () => {
+      try {
+        const spec = specSelectors && specSelectors.specJson && specSelectors.specJson()
+        const js = spec && typeof spec.toJS === "function" ? spec.toJS() : {}
+        const next = { ...js }
+        const list = Array.isArray(next.tags) ? next.tags.slice() : []
+        const filtered = list.filter(t => !t || t.name !== tag)
+        // Only update if something changed
+        if (filtered.length !== list.length) {
+          next.tags = filtered
+          const asString = JSON.stringify(next, null, 2)
+          specActions && specActions.updateSpec && specActions.updateSpec(asString)
+        }
+      } catch (e) {
+        // no-op
+      }
+    }
 
     return (
       <div className={showTag ? "opblock-tag-section is-open" : "opblock-tag-section"} >
@@ -101,15 +127,23 @@ export default class OperationTag extends React.Component {
             </div>
           }
 
-
-          <button
-            aria-expanded={showTag}
-            className="expand-operation"
-            title={showTag ? "Collapse operation" : "Expand operation"}
-            onClick={() => layoutActions.show(isShownKey, !showTag)}>
-
-            {showTag ? <ArrowUpIcon className="arrow" /> : <ArrowDownIcon className="arrow" />}
-          </button>
+          {isEmptyTag ? (
+            <button
+              aria-label="Delete tag"
+              className="expand-operation"
+              title="Delete tag"
+              onClick={(e) => { e.stopPropagation(); onDeleteTag() }}>
+              {TrashIcon ? <TrashIcon className="arrow" /> : <span style={{fontSize: '20px', fontWeight: 'bold'}}>🗑️</span>}
+            </button>
+          ) : (
+            <button
+              aria-expanded={showTag}
+              className="expand-operation"
+              title={showTag ? "Collapse operation" : "Expand operation"}
+              onClick={() => layoutActions.show(isShownKey, !showTag)}>
+              {showTag ? <ArrowUpIcon className="arrow" /> : <ArrowDownIcon className="arrow" />}
+            </button>
+          )}
         </h3>
 
         <Collapse isOpened={showTag}>

@@ -79,6 +79,7 @@ export default class TagsBadges extends React.Component {
     }
 
     return (
+      <>
       <section className={isSectionOpen ? "opblock-tag-section tags-section is-open" : "opblock-tag-section tags-section"}>
         <h3
           onClick={toggleSection}
@@ -128,7 +129,8 @@ export default class TagsBadges extends React.Component {
           </div>
         )}
 
-        {this.state.showDialog ? (
+      </section>
+      {this.state.showDialog ? (
           <div className="dialog-ux">
             <div className="backdrop-ux" onClick={closeDialog}></div>
             <div className="modal-ux">
@@ -143,7 +145,7 @@ export default class TagsBadges extends React.Component {
                   <div className="modal-ux-content">
                     <div className="form-field">
                       <label className="form-label" htmlFor="new-tag-input">Tag name</label>
-                      <input className="form-input" id="new-tag-input" type="text" value={this.state.newTagName} onChange={onNameChange} />
+                      <input className="form-input" autoFocus id="new-tag-input" type="text" value={this.state.newTagName} onChange={onNameChange} />
                     </div>
                     <div className="form-field">
                       <label className="form-label" htmlFor="new-tag-desc">Description (optional)</label>
@@ -168,7 +170,7 @@ export default class TagsBadges extends React.Component {
             </div>
           </div>
         ) : null}
-      </section>
+      </>
     )
   }
 }
