@@ -139,17 +139,8 @@ export default class TagsBadges extends React.Component {
                       <textarea className="form-textarea" id="new-tag-desc" rows="3" value={this.state.newTagDescription} onChange={onDescChange} />
                     </div>
                     <div className="modal-actions-row">
-                      {Button ? (
-                        <>
-                          <Button className="btn modal-btn" onClick={closeDialog}>Cancel</Button>
-                          <Button className="btn modal-btn" onClick={onAddTag}>Add</Button>
-                        </>
-                      ) : (
-                        <>
-                          <button className="btn modal-btn" onClick={closeDialog}>Cancel</button>
-                          <button className="btn modal-btn" onClick={onAddTag}>Add</button>
-                        </>
-                      )}
+                      <Button className="btn modal-btn" onClick={closeDialog}>Cancel</Button>
+                      <Button className="btn modal-btn" onClick={onAddTag}>Add</Button>
                     </div>
                   </div>
                 </div>

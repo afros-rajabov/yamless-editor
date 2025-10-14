@@ -144,9 +144,10 @@ const Models = ({
                   </button>
                 </div>
                 <div className="modal-ux-content">
+                  {/* Form */}
                   <div className="modal-actions-row">
-                  <Button className="btn modal-btn" onClick={closeDialog}>Cancel</Button>
-                  <Button className="btn modal-btn" onClick={handleAddSchema}>Add</Button>
+                    <Button className="btn modal-btn" onClick={closeDialog}>Cancel</Button>
+                    <Button className="btn modal-btn" onClick={handleAddSchema}>Add</Button>
                   </div>
                 </div>
               </div>
