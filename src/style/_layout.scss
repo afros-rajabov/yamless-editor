@@ -678,7 +678,8 @@
 
 .tags-badges-container {
   margin: 0 auto;
-  // padding-bottom: 32px;
+  position: relative;
+  padding-bottom: 48px; // space for the fixed Add button
 }
 
 // Tags section styled like Schemas section
@@ -689,8 +690,6 @@ section.tags-section {
   border-radius: 4px;
 
   &.is-open {
-    padding: 0 0 20px;
-
     h3 {
       margin: 0 0 5px 0;
 
@@ -784,6 +783,9 @@ section.tags-section {
   background: #244a66;
   color: #fff;
   cursor: pointer;
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
 }
 
 .scheme-container {

@@ -100,19 +100,20 @@ export default class TagsBadges extends React.Component {
         </h3>
 
         <Collapse isOpened={!!isSectionOpen}>
-            <div className="tags-badges">
-              {tags.map((tag, idx) => {
-                const name = tag.get("name")
-                const anchorName = name.replace(/ /g, "_")
-                if(!name) return null
-                const anchor = `#operations-tag-${anchorName}`
-                return (
-                  <a key={name + idx} className="tag-badge tag-badge--link" href={anchor} onClick={() => onBadgeClick(name)}>{name}</a>
-                )
-              }).toArray()}
-              {/* <button className="btn" onClick={openDialog}>Add</button> */}
+            <div className="tags-badges-container">
+              <div className="tags-badges">
+                {tags.map((tag, idx) => {
+                  const name = tag.get("name")
+                  const anchorName = name.replace(/ /g, "_")
+                  if(!name) return null
+                  const anchor = `#operations-tag-${anchorName}`
+                  return (
+                    <a key={name + idx} className="tag-badge tag-badge--link" href={anchor} onClick={() => onBadgeClick(name)}>{name}</a>
+                  )
+                }).toArray()}
+              </div>
+              <button className="btn tags-badges-add" onClick={openDialog}>Add</button>
             </div>
-            <button className="btn" onClick={openDialog}>Add</button>
         </Collapse>
 
       </section>
