@@ -203,6 +203,13 @@ const Models = ({
       }
     }
     
+    // Validate enum schemas
+    if (schemaData.type === "enum") {
+      if (!schemaData.enum || schemaData.enum.length === 0) {
+        errors.enum = "Enum schema must have at least one value"
+      }
+    }
+    
     setValidationErrors(errors)
     return Object.keys(errors).length === 0
   }, [schemaName, schemaData, schemas])
@@ -321,6 +328,9 @@ const Models = ({
             }
           }
           
+        } else if (schemaData.type === "enum") {
+          // For enum type, we only need the enum array, no type field
+          // The enum values are already in schemaData.enum
         }
       }
       
@@ -450,6 +460,7 @@ const Models = ({
                       >
                         <option value="object">Object</option>
                         <option value="array">Array</option>
+                        <option value="enum">Enum</option>
                       </select>
                       <small>The fundamental data type. This will dynamically show/hide other relevant fields.</small>
                     </div>
@@ -722,6 +733,89 @@ const Models = ({
                           ))}
                         </select>
                       </div>
+                    </div>
+                  )}
+
+                  {/* Section 4: Enum Values (for enum type) */}
+                  {schemaData.type === "enum" && !schemaData.useComposition && (
+                    <div className="form-section">
+                      <h4>Enum Values</h4>
+                      <p>Define the allowed values for this enum schema.</p>
+                      
+                      {schemaData.enum.map((enumItem, index) => (
+                        <div key={index} className="enum-value-row" style={{ 
+                          display: 'flex', 
+                          gap: '10px', 
+                          alignItems: 'end', 
+                          marginBottom: '10px',
+                          padding: '10px',
+                          border: '1px solid #e0e0e0',
+                          borderRadius: '4px',
+                          background: '#fafafa'
+                        }}>
+                          <div style={{ flex: 1 }}>
+                            <label className="form-label">Value <span className="required">*</span></label>
+                            <input 
+                              className="form-input" 
+                              type="text" 
+                              value={typeof enumItem === 'string' ? enumItem : enumItem.toString()} 
+                              onChange={(e) => {
+                                const newEnum = [...schemaData.enum]
+                                const value = enumItem.type === "number" ? parseFloat(e.target.value) : e.target.value
+                                if (!isNaN(value) || enumItem.type === "string") {
+                                  newEnum[index] = value
+                                  setSchemaData({...schemaData, enum: newEnum})
+                                }
+                              }}
+                              placeholder="Enter enum value"
+                            />
+                          </div>
+                          <div>
+                            <label className="form-label">Type</label>
+                            <select 
+                              className="form-input" 
+                              value={typeof enumItem === 'number' ? 'number' : 'string'} 
+                              onChange={(e) => {
+                                const newEnum = [...schemaData.enum]
+                                const currentValue = enumItem.toString()
+                                const newValue = e.target.value === "number" ? parseFloat(currentValue) : currentValue
+                                if (!isNaN(newValue) || e.target.value === "string") {
+                                  newEnum[index] = newValue
+                                  setSchemaData({...schemaData, enum: newEnum})
+                                }
+                              }}
+                            >
+                              <option value="string">String</option>
+                              <option value="number">Number</option>
+                            </select>
+                          </div>
+                          <button 
+                            type="button" 
+                            className="btn btn-danger btn-sm" 
+                            onClick={() => {
+                              const newEnum = schemaData.enum.filter((_, i) => i !== index)
+                              setSchemaData({...schemaData, enum: newEnum})
+                            }}
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      ))}
+                      
+                      <button 
+                        type="button" 
+                        className="btn btn-primary" 
+                        onClick={() => setSchemaData({
+                          ...schemaData, 
+                          enum: [...schemaData.enum, ""]
+                        })}
+                      >
+                        Add Enum Value
+                      </button>
+                      
+                      {validationErrors.enum && (
+                        <div className="form-error">{validationErrors.enum}</div>
+                      )}
                     </div>
                   )}
 
