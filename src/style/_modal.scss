@@ -37,6 +37,10 @@
     box-shadow: 0 10px 30px 0 rgba($dialog-ux-modal-box-shadow-color, 0.2);
   }
 
+  .modal-ux.schema-dialog {
+    max-width: 900px;
+  }
+
   .modal-ux-content {
     overflow-y: auto;
 

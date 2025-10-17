@@ -409,7 +409,7 @@ const Models = ({
       {showDialog && (
         <div className="dialog-ux">
           <div className="backdrop-ux" onClick={closeDialog}></div>
-          <div className="modal-ux">
+          <div className="modal-ux schema-dialog">
             <div className="modal-dialog-ux">
               <div className="modal-ux-inner">
                 <div className="modal-ux-header">
