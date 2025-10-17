@@ -421,30 +421,32 @@ const Models = ({
                 <div className="modal-ux-content">
                   {/* Section 1: Basic Info */}
                   <div className="form-section">
-                    <div className="form-field">
-                      <label className="form-label" htmlFor="schema-name">Schema Name (Key) <span className="required">*</span></label>
-                      <input 
-                        className="form-input" 
-                        id="schema-name" 
-                        type="text" 
-                        value={schemaName} 
-                        onChange={(e) => setSchemaName(e.target.value)}
-                        placeholder="UserCreateRequest"
-                      />
-                      {validationErrors.schemaName && (
-                        <div className="form-error">{validationErrors.schemaName}</div>
-                      )}
-                    </div>
-                    
-                    <div className="form-field">
-                      <label className="form-label" htmlFor="schema-description">Description</label>
-                      <input 
-                        className="form-input" 
-                        id="schema-description" 
-                        type="text" 
-                        value={schemaData.description} 
-                        onChange={(e) => setSchemaData({...schemaData, description: e.target.value})}
-                      />
+                    <div style={{ display: 'flex', gap: '15px', marginBottom: '12px' }}>
+                      <div className="form-field" style={{ flex: 1 }}>
+                        <label className="form-label" htmlFor="schema-name">Schema Name (Key) <span className="required">*</span></label>
+                        <input 
+                          className="form-input" 
+                          id="schema-name" 
+                          type="text" 
+                          value={schemaName} 
+                          onChange={(e) => setSchemaName(e.target.value)}
+                          placeholder="UserCreateRequest"
+                        />
+                        {validationErrors.schemaName && (
+                          <div className="form-error">{validationErrors.schemaName}</div>
+                        )}
+                      </div>
+                      
+                      <div className="form-field" style={{ flex: 1 }}>
+                        <label className="form-label" htmlFor="schema-description">Description</label>
+                        <input 
+                          className="form-input" 
+                          id="schema-description" 
+                          type="text" 
+                          value={schemaData.description} 
+                          onChange={(e) => setSchemaData({...schemaData, description: e.target.value})}
+                        />
+                      </div>
                     </div>
                     
                     <div className="form-field">
