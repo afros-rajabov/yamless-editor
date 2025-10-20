@@ -78,6 +78,11 @@ const Models = ({
   
   // Reusable styles for checkboxes
   const checkboxLabelStyle = { display: 'flex', alignItems: 'center', gap: '8px' }
+  const checkboxInputStyle = { 
+    width: '16px', 
+    height: '16px', 
+    cursor: 'pointer' 
+  }
   const Collapse = getComponent("Collapse")
   const JSONSchema202012 = getComponent("JSONSchema202012")
   const ArrowUpIcon = getComponent("ArrowUpIcon")
@@ -863,6 +868,7 @@ const Models = ({
                               type="checkbox" 
                               checked={currentProperty.required} 
                               onChange={(e) => setCurrentProperty({...currentProperty, required: e.target.checked})}
+                              style={checkboxInputStyle}
                             />
                             Required
                           </label>
@@ -1002,12 +1008,13 @@ const Models = ({
                     <h4>Additional Schema Properties</h4>
                     
                     <div className="form-field">
-                      <div style={{ display: 'flex', gap: '20px' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                         <label style={checkboxLabelStyle}>
                           <input 
                             type="checkbox" 
                             checked={schemaData.nullable} 
                             onChange={(e) => setSchemaData({...schemaData, nullable: e.target.checked})}
+                            style={checkboxInputStyle}
                           />
                           Nullable (value can be null)
                         </label>
@@ -1017,6 +1024,7 @@ const Models = ({
                             type="checkbox" 
                             checked={schemaData.deprecated} 
                             onChange={(e) => setSchemaData({...schemaData, deprecated: e.target.checked})}
+                            style={checkboxInputStyle}
                           />
                           Deprecated
                         </label>
