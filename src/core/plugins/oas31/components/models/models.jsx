@@ -63,6 +63,14 @@ const Models = ({
     compositionSchemas: []
   })
   const [validationErrors, setValidationErrors] = useState({})
+  const [currentProperty, setCurrentProperty] = useState({
+    name: "",
+    type: "string",
+    required: false,
+    description: "",
+    format: "",
+    itemsType: "string"
+  })
   const Collapse = getComponent("Collapse")
   const JSONSchema202012 = getComponent("JSONSchema202012")
   const ArrowUpIcon = getComponent("ArrowUpIcon")
@@ -221,6 +229,49 @@ const Models = ({
     return Object.keys(errors).length === 0
   }, [schemaName, schemaData, schemas, schemaMode])
   
+  const handleAddProperty = useCallback(() => {
+    // Validate current property
+    if (!currentProperty.name.trim()) {
+      setValidationErrors({ propertyName: "Property name is required" })
+      return
+    }
+    
+    // Check for duplicate property names
+    const existingProperty = schemaData.properties.find(prop => prop.name === currentProperty.name.trim())
+    if (existingProperty) {
+      setValidationErrors({ propertyName: "Property name already exists" })
+      return
+    }
+    
+    // Clear any previous property validation errors
+    setValidationErrors(prev => ({ ...prev, propertyName: undefined }))
+    
+    // Add property to schema data
+    const newProperty = {
+      name: currentProperty.name.trim(),
+      type: currentProperty.type,
+      required: currentProperty.required,
+      description: currentProperty.description,
+      format: currentProperty.format,
+      itemsType: currentProperty.itemsType
+    }
+    
+    setSchemaData({
+      ...schemaData,
+      properties: [...schemaData.properties, newProperty]
+    })
+    
+    // Reset form
+    setCurrentProperty({
+      name: "",
+      type: "string",
+      required: false,
+      description: "",
+      format: "",
+      itemsType: "string"
+    })
+  }, [currentProperty, schemaData])
+
   const handleAddSchema = useCallback(() => {
     if (!validateForm()) {
       return
@@ -606,166 +657,183 @@ const Models = ({
                     <div className="form-section">
                       <h4>Properties</h4>
                       
-                      {schemaData.properties.map((property, index) => (
-                        <div key={index} className="property-row">
-                          <div className="property-fields">
-                            <div className="form-field">
-                              <label className="form-label">Property Name <span className="required">*</span></label>
-                              <input 
-                                className="form-input" 
-                                type="text" 
-                                value={property.name || ""} 
-                                onChange={(e) => {
-                                  const newProperties = [...schemaData.properties]
-                                  newProperties[index] = {...newProperties[index], name: e.target.value}
-                                  setSchemaData({...schemaData, properties: newProperties})
-                                }}
-                                placeholder="e.g., username"
-                              />
-                            </div>
-                            
-                            <div className="form-field">
-                              <label className="form-label">Property Type <span className="required">*</span></label>
-                              <select 
-                                className="form-input" 
-                                value={property.type || "string"} 
-                                onChange={(e) => {
-                                  const newProperties = [...schemaData.properties]
-                                  newProperties[index] = {...newProperties[index], type: e.target.value, format: ""}
-                                  setSchemaData({...schemaData, properties: newProperties})
-                                }}
-                              >
-                                <option value="string">String</option>
-                                <option value="number">Number</option>
-                                <option value="integer">Integer</option>
-                                <option value="boolean">Boolean</option>
-                                <option value="array">Array</option>
-                                <option value="object">Object</option>
-                                {Object.keys(schemas).map(schemaKey => (
-                                  <option key={schemaKey} value={`#/components/schemas/${schemaKey}`}>
-                                    {schemaKey} (Reference)
-                                  </option>
-                                ))}
-                              </select>
-                            </div>
-                            
-                            <div className="form-field">
-                              <label className="form-label">Format</label>
-                              <select 
-                                className="form-input" 
-                                value={property.format || ""} 
-                                onChange={(e) => {
-                                  const newProperties = [...schemaData.properties]
-                                  newProperties[index] = {...newProperties[index], format: e.target.value}
-                                  setSchemaData({...schemaData, properties: newProperties})
-                                }}
-                              >
-                                <option value="">None</option>
-                                {property.type === "string" && (
-                                  <>
-                                    <option value="date">Date</option>
-                                    <option value="date-time">Date-Time</option>
-                                    <option value="email">Email</option>
-                                    <option value="uri">URI</option>
-                                    <option value="uuid">UUID</option>
-                                    <option value="password">Password</option>
-                                    <option value="hostname">Hostname</option>
-                                    <option value="ipv4">IPv4</option>
-                                    <option value="ipv6">IPv6</option>
-                                  </>
+                      {/* Added Properties List (Read-only) */}
+                      {schemaData.properties.length > 0 && (
+                        <div className="added-properties">
+                          <h5>Added Properties:</h5>
+                          {schemaData.properties.map((property, index) => (
+                            <div key={index} className="property-card" style={{
+                              display: 'flex',
+                              justifyContent: 'space-between',
+                              alignItems: 'center',
+                              padding: '10px',
+                              margin: '5px 0',
+                              border: '1px solid #e0e0e0',
+                              borderRadius: '4px',
+                              backgroundColor: '#f9f9f9'
+                            }}>
+                              <div className="property-info">
+                                <strong>{property.name}</strong>
+                                <span style={{ margin: '0 10px', color: '#666' }}>
+                                  ({property.type}
+                                  {property.format && `, ${property.format}`}
+                                  {property.required && ', required'})
+                                </span>
+                                {property.description && (
+                                  <span style={{ color: '#666', fontSize: '0.9em' }}>
+                                    - {property.description}
+                                  </span>
                                 )}
-                                {(property.type === "number" || property.type === "integer") && (
-                                  <>
-                                    <option value="int32">int32</option>
-                                    <option value="int64">int64</option>
-                                    <option value="float">Float</option>
-                                    <option value="double">Double</option>
-                                  </>
-                                )}
-                              </select>
-                            </div>
-                            
-                            <div className="form-field">
-                              <label>
-                                <input 
-                                  type="checkbox" 
-                                  checked={property.required || false} 
-                                  onChange={(e) => {
-                                    const newProperties = [...schemaData.properties]
-                                    newProperties[index] = {...newProperties[index], required: e.target.checked}
-                                    setSchemaData({...schemaData, properties: newProperties})
-                                  }}
-                                />
-                                Required
-                              </label>
-                            </div>
-                            
-                            <div className="form-field">
-                              <label className="form-label">Description</label>
-                              <input 
-                                className="form-input" 
-                                type="text" 
-                                value={property.description || ""} 
-                                onChange={(e) => {
-                                  const newProperties = [...schemaData.properties]
-                                  newProperties[index] = {...newProperties[index], description: e.target.value}
-                                  setSchemaData({...schemaData, properties: newProperties})
-                                }}
-                                placeholder="Property description"
-                              />
-                            </div>
-                            
-                            {property.type === "array" && (
-                              <div className="form-field">
-                                <label className="form-label">Items Type <span className="required">*</span></label>
-                                <select 
-                                  className="form-input" 
-                                  value={property.itemsType || "string"} 
-                                  onChange={(e) => {
-                                    const newProperties = [...schemaData.properties]
-                                    newProperties[index] = {...newProperties[index], itemsType: e.target.value}
-                                    setSchemaData({...schemaData, properties: newProperties})
-                                  }}
-                                >
-                                  <option value="string">String</option>
-                                  <option value="number">Number</option>
-                                  <option value="integer">Integer</option>
-                                  <option value="boolean">Boolean</option>
-                                  <option value="object">Object</option>
-                                  <option value="array">Array</option>
-                                  {Object.keys(schemas).map(schemaKey => (
-                                    <option key={schemaKey} value={`#/components/schemas/${schemaKey}`}>
-                                      {schemaKey} (Reference)
-                                    </option>
-                                  ))}
-                                </select>
                               </div>
+                              <button 
+                                type="button" 
+                                className="btn btn-danger btn-sm" 
+                                onClick={() => {
+                                  const newProperties = schemaData.properties.filter((_, i) => i !== index)
+                                  setSchemaData({...schemaData, properties: newProperties})
+                                }}
+                              >
+                                Remove
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      
+                      {/* Add Property Form */}
+                      <div className="add-property-form" style={{
+                        marginTop: '20px',
+                        padding: '15px',
+                        border: '1px solid #ddd',
+                        borderRadius: '4px',
+                        backgroundColor: '#fafafa'
+                      }}>
+                        <h5>Add New Property:</h5>
+                        
+                        <div style={{ display: 'flex', gap: '15px', marginBottom: '12px' }}>
+                          <div className="form-field" style={{ flex: 1 }}>
+                            <label className="form-label">Property Name <span className="required">*</span></label>
+                            <input 
+                              className="form-input" 
+                              type="text" 
+                              value={currentProperty.name} 
+                              onChange={(e) => setCurrentProperty({...currentProperty, name: e.target.value})}
+                              placeholder="e.g., username"
+                            />
+                            {validationErrors.propertyName && (
+                              <div className="form-error">{validationErrors.propertyName}</div>
                             )}
                           </div>
                           
-                          <button 
-                            type="button" 
-                            className="btn btn-danger btn-sm" 
-                            onClick={() => {
-                              const newProperties = schemaData.properties.filter((_, i) => i !== index)
-                              setSchemaData({...schemaData, properties: newProperties})
-                            }}
-                          >
-                            Remove Property
-                          </button>
+                          <div className="form-field" style={{ flex: 1 }}>
+                            <label className="form-label">Property Type <span className="required">*</span></label>
+                            <select 
+                              className="form-input" 
+                              value={currentProperty.type} 
+                              onChange={(e) => setCurrentProperty({...currentProperty, type: e.target.value, format: ""})}
+                            >
+                              <option value="string">String</option>
+                              <option value="number">Number</option>
+                              <option value="integer">Integer</option>
+                              <option value="boolean">Boolean</option>
+                              <option value="array">Array</option>
+                              <option value="object">Object</option>
+                              {Object.keys(schemas).map(schemaKey => (
+                                <option key={schemaKey} value={`#/components/schemas/${schemaKey}`}>
+                                  {schemaKey} (Reference)
+                                </option>
+                              ))}
+                            </select>
+                          </div>
                         </div>
-                      ))}
-                      
-                      <button 
-                        type="button" 
-                        className="btn btn-primary" 
-                        onClick={() => setSchemaData({
-                          ...schemaData, 
-                          properties: [...schemaData.properties, {name: "", type: "string", required: false, description: "", itemsType: "string"}]
-                        })}
-                      >
-                        Add Property
-                      </button>
+                        
+                        <div style={{ display: 'flex', gap: '15px', marginBottom: '12px' }}>
+                          <div className="form-field" style={{ flex: 1 }}>
+                            <label className="form-label">Format</label>
+                            <select 
+                              className="form-input" 
+                              value={currentProperty.format} 
+                              onChange={(e) => setCurrentProperty({...currentProperty, format: e.target.value})}
+                            >
+                              <option value="">None</option>
+                              {currentProperty.type === "string" && (
+                                <>
+                                  <option value="date">Date</option>
+                                  <option value="date-time">Date-Time</option>
+                                  <option value="email">Email</option>
+                                  <option value="uri">URI</option>
+                                  <option value="uuid">UUID</option>
+                                  <option value="password">Password</option>
+                                  <option value="hostname">Hostname</option>
+                                  <option value="ipv4">IPv4</option>
+                                  <option value="ipv6">IPv6</option>
+                                </>
+                              )}
+                              {(currentProperty.type === "number" || currentProperty.type === "integer") && (
+                                <>
+                                  <option value="int32">int32</option>
+                                  <option value="int64">int64</option>
+                                  <option value="float">Float</option>
+                                  <option value="double">Double</option>
+                                </>
+                              )}
+                            </select>
+                          </div>
+                          
+                          <div className="form-field" style={{ flex: 1 }}>
+                            <label className="form-label">Description</label>
+                            <input 
+                              className="form-input" 
+                              type="text" 
+                              value={currentProperty.description} 
+                              onChange={(e) => setCurrentProperty({...currentProperty, description: e.target.value})}
+                              placeholder="Property description"
+                            />
+                          </div>
+                        </div>
+                        
+                        {currentProperty.type === "array" && (
+                          <div className="form-field" style={{ marginBottom: '12px' }}>
+                            <label className="form-label">Items Type <span className="required">*</span></label>
+                            <select 
+                              className="form-input" 
+                              value={currentProperty.itemsType} 
+                              onChange={(e) => setCurrentProperty({...currentProperty, itemsType: e.target.value})}
+                            >
+                              <option value="string">String</option>
+                              <option value="number">Number</option>
+                              <option value="integer">Integer</option>
+                              <option value="boolean">Boolean</option>
+                              <option value="object">Object</option>
+                              <option value="array">Array</option>
+                              {Object.keys(schemas).map(schemaKey => (
+                                <option key={schemaKey} value={`#/components/schemas/${schemaKey}`}>
+                                  {schemaKey} (Reference)
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        )}
+                        
+                        <div style={{ display: 'flex', gap: '15px', alignItems: 'center', marginBottom: '12px' }}>
+                          <label>
+                            <input 
+                              type="checkbox" 
+                              checked={currentProperty.required} 
+                              onChange={(e) => setCurrentProperty({...currentProperty, required: e.target.checked})}
+                            />
+                            Required
+                          </label>
+                        </div>
+                        
+                        <button 
+                          type="button" 
+                          className="btn btn-primary" 
+                          onClick={handleAddProperty}
+                        >
+                          Add Property
+                        </button>
+                      </div>
                     </div>
                   )}
 
