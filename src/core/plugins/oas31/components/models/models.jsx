@@ -161,7 +161,12 @@ const Models = ({
               if (prop.name) {
                 const propSchema = {}
                 
-                if (prop.type && prop.type.startsWith("#/components/schemas/")) {
+                // Handle composition properties (anyOf, oneOf, allOf)
+                if (prop.anyOf || prop.oneOf || prop.allOf) {
+                  if (prop.anyOf) propSchema.anyOf = prop.anyOf
+                  if (prop.oneOf) propSchema.oneOf = prop.oneOf
+                  if (prop.allOf) propSchema.allOf = prop.allOf
+                } else if (prop.type && prop.type.startsWith("#/components/schemas/")) {
                   propSchema.$ref = prop.type
                 } else if (prop.type) {
                   propSchema.type = prop.type

@@ -14,7 +14,8 @@ const SearchableSelect = ({
   onToggle,
   options,
   primitiveOptions = [],
-  displayValue
+  displayValue,
+  disabled = false
 }) => {
   const dropdownRef = useRef(null)
   const searchInputRef = useRef(null)
@@ -56,13 +57,14 @@ const SearchableSelect = ({
       <div 
         className="form-input" 
         style={{ 
-          cursor: 'pointer', 
+          cursor: disabled ? 'not-allowed' : 'pointer', 
           display: 'flex', 
           justifyContent: 'space-between', 
           alignItems: 'center',
-          backgroundColor: '#fff'
+          backgroundColor: disabled ? '#f5f5f5' : '#fff',
+          opacity: disabled ? 0.6 : 1
         }}
-        onClick={() => onToggle(!isOpen)}
+        onClick={() => !disabled && onToggle(!isOpen)}
       >
         <span>{displayValue || value || placeholder}</span>
         <span style={{ transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}>
@@ -70,7 +72,7 @@ const SearchableSelect = ({
         </span>
       </div>
       
-      {isOpen && (
+      {isOpen && !disabled && (
         <div style={{
           position: 'absolute',
           top: '100%',

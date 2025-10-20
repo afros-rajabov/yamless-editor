@@ -60,7 +60,10 @@ const SchemaDialog = ({
     required: false,
     description: "",
     format: "",
-    itemsType: "string"
+    itemsType: "string",
+    isComposition: false,
+    compositionType: "anyOf",
+    compositionSchemas: []
   })
   const [currentEnumValue, setCurrentEnumValue] = useState({
     value: "",
@@ -157,7 +160,10 @@ const SchemaDialog = ({
       required: false,
       description: "",
       format: "",
-      itemsType: "string"
+      itemsType: "string",
+      isComposition: false,
+      compositionType: "anyOf",
+      compositionSchemas: []
     })
     setCurrentEnumValue({
       value: "",
@@ -246,17 +252,35 @@ const SchemaDialog = ({
       return
     }
     
+    // Validate composition properties
+    if (currentProperty.isComposition) {
+      if (!currentProperty.compositionSchemas || currentProperty.compositionSchemas.length === 0) {
+        setValidationErrors({ compositionSchemas: "At least one schema must be selected for composition" })
+        return
+      }
+    }
+    
     // Clear any previous property validation errors
-    setValidationErrors(prev => ({ ...prev, propertyName: undefined }))
+    setValidationErrors(prev => ({ ...prev, propertyName: undefined, compositionSchemas: undefined }))
     
     // Add property to schema data
     const newProperty = {
       name: currentProperty.name.trim(),
-      type: currentProperty.type,
       required: currentProperty.required,
       description: currentProperty.description,
       format: currentProperty.format,
       itemsType: currentProperty.itemsType
+    }
+    
+    // Add type or composition data based on property type
+    if (currentProperty.isComposition) {
+      // For composition properties, add the composition keyword directly
+      newProperty[currentProperty.compositionType] = currentProperty.compositionSchemas.map(schemaName => ({
+        $ref: `#/components/schemas/${schemaName}`
+      }))
+    } else {
+      // For regular properties, add the type
+      newProperty.type = currentProperty.type
     }
     
     setSchemaData({
@@ -271,7 +295,10 @@ const SchemaDialog = ({
       required: false,
       description: "",
       format: "",
-      itemsType: "string"
+      itemsType: "string",
+      isComposition: false,
+      compositionType: "anyOf",
+      compositionSchemas: []
     })
   }, [currentProperty, schemaData])
 
@@ -546,11 +573,19 @@ const SchemaDialog = ({
                           <div className="property-info">
                             <strong>{property.name}</strong>
                             <span style={{ margin: '0 10px', color: '#666' }}>
-                              ({property.type.startsWith('#/components/schemas/') 
-                                ? property.type.replace('#/components/schemas/', '') 
-                                : property.type}
-                              {property.format && `, ${property.format}`}
-                              {property.required && ', required'})
+                              {property.anyOf || property.oneOf || property.allOf ? (
+                                (() => {
+                                  const compositionType = property.anyOf ? 'anyOf' : property.oneOf ? 'oneOf' : 'allOf'
+                                  const schemas = property[compositionType].map(ref => 
+                                    ref.$ref.replace('#/components/schemas/', '')
+                                  ).join(', ')
+                                  return `(${compositionType}: ${schemas}${property.required ? ', required' : ''})`
+                                })()
+                              ) : (
+                                `(${property.type.startsWith('#/components/schemas/') 
+                                  ? property.type.replace('#/components/schemas/', '') 
+                                  : property.type}${property.format && `, ${property.format}`}${property.required && ', required'})`
+                              )}
                             </span>
                             {property.description && (
                               <span style={{ color: '#666', fontSize: '0.9em' }}>
@@ -581,7 +616,22 @@ const SchemaDialog = ({
                     borderRadius: '4px',
                     backgroundColor: '#fafafa'
                   }}>
-                    <h5>Add New Property:</h5>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                      <h5 style={{ margin: 0 }}>Add New Property:</h5>
+                      <label style={checkboxLabelStyle}>
+                        <input 
+                          type="checkbox" 
+                          checked={currentProperty.isComposition} 
+                          onChange={(e) => setCurrentProperty({
+                            ...currentProperty, 
+                            isComposition: e.target.checked,
+                            format: e.target.checked ? "" : currentProperty.format
+                          })}
+                          style={checkboxInputStyle}
+                        />
+                        Use Composition
+                      </label>
+                    </div>
                     
                     <div style={{ display: 'flex', gap: '15px', marginBottom: '12px' }}>
                       <div className="form-field" style={{ flex: 1 }}>
@@ -608,6 +658,7 @@ const SchemaDialog = ({
                           onSearchChange={setPropertyTypeSearch}
                           isOpen={propertyDropdownOpen}
                           onToggle={setPropertyDropdownOpen}
+                          disabled={currentProperty.isComposition}
                           displayValue={currentProperty.type.startsWith('#/components/schemas/') 
                             ? currentProperty.type.replace('#/components/schemas/', '') 
                             : currentProperty.type}
@@ -626,6 +677,71 @@ const SchemaDialog = ({
                         />
                       </div>
                     </div>
+                    
+                    
+                    {/* Composition Controls */}
+                    {currentProperty.isComposition && (
+                      <>
+                        <div className="form-field" style={{ marginBottom: '12px' }}>
+                          <label className="form-label">Composition Type <span className="required">*</span></label>
+                          <select 
+                            className="form-input" 
+                            value={currentProperty.compositionType} 
+                            onChange={(e) => setCurrentProperty({...currentProperty, compositionType: e.target.value})}
+                          >
+                            <option value="anyOf">anyOf (Union - any can match)</option>
+                            <option value="oneOf">oneOf (Exclusive Union - exactly one must match)</option>
+                            <option value="allOf">allOf (Intersection - all must match)</option>
+                          </select>
+                        </div>
+                        
+                        <div className="form-field">
+                          <label className="form-label">Member Schemas <span className="required">*</span></label>
+                          <div className="schema-selection">
+                            <div className="selected-schemas">
+                              {currentProperty.compositionSchemas.map((schema, index) => (
+                                <div key={index} className="selected-schema">
+                                  {schema}
+                                  <button 
+                                    type="button" 
+                                    onClick={() => setCurrentProperty({
+                                      ...currentProperty, 
+                                      compositionSchemas: currentProperty.compositionSchemas.filter((_, i) => i !== index)
+                                    })}
+                                  >
+                                    Remove
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                            <SearchableSelect
+                              value=""
+                              onChange={(value) => {
+                                if (value && !currentProperty.compositionSchemas.includes(value)) {
+                                  setCurrentProperty({
+                                    ...currentProperty, 
+                                    compositionSchemas: [...currentProperty.compositionSchemas, value]
+                                  })
+                                }
+                              }}
+                              placeholder="Select existing schema..."
+                              searchValue={compositionSchemaSearch}
+                              onSearchChange={setCompositionSchemaSearch}
+                              isOpen={compositionDropdownOpen}
+                              onToggle={setCompositionDropdownOpen}
+                              primitiveOptions={[]}
+                              options={filterSchemas(compositionSchemaSearch).map(schemaKey => ({
+                                value: schemaKey,
+                                label: schemaKey
+                              }))}
+                            />
+                          </div>
+                          {validationErrors.compositionSchemas && (
+                            <div className="form-error">{validationErrors.compositionSchemas}</div>
+                          )}
+                        </div>
+                      </>
+                    )}
                     
                     {currentProperty.type === "array" && (
                       <div className="form-field" style={{ marginBottom: '12px' }}>
@@ -658,37 +774,39 @@ const SchemaDialog = ({
                     )}
                     
                     <div style={{ display: 'flex', gap: '15px', marginBottom: '12px' }}>
-                      <div className="form-field" style={{ flex: 1 }}>
-                        <label className="form-label">Format</label>
-                        <select 
-                          className="form-input" 
-                          value={currentProperty.format} 
-                          onChange={(e) => setCurrentProperty({...currentProperty, format: e.target.value})}
-                        >
-                          <option value="">None</option>
-                          {currentProperty.type === "string" && (
-                            <>
-                              <option value="date">Date</option>
-                              <option value="date-time">Date-Time</option>
-                              <option value="email">Email</option>
-                              <option value="uri">URI</option>
-                              <option value="uuid">UUID</option>
-                              <option value="password">Password</option>
-                              <option value="hostname">Hostname</option>
-                              <option value="ipv4">IPv4</option>
-                              <option value="ipv6">IPv6</option>
-                            </>
-                          )}
-                          {(currentProperty.type === "number" || currentProperty.type === "integer") && (
-                            <>
-                              <option value="int32">int32</option>
-                              <option value="int64">int64</option>
-                              <option value="float">Float</option>
-                              <option value="double">Double</option>
-                            </>
-                          )}
-                        </select>
-                      </div>
+                      {!currentProperty.isComposition && (
+                        <div className="form-field" style={{ flex: 1 }}>
+                          <label className="form-label">Format</label>
+                          <select 
+                            className="form-input" 
+                            value={currentProperty.format} 
+                            onChange={(e) => setCurrentProperty({...currentProperty, format: e.target.value})}
+                          >
+                            <option value="">None</option>
+                            {currentProperty.type === "string" && (
+                              <>
+                                <option value="date">Date</option>
+                                <option value="date-time">Date-Time</option>
+                                <option value="email">Email</option>
+                                <option value="uri">URI</option>
+                                <option value="uuid">UUID</option>
+                                <option value="password">Password</option>
+                                <option value="hostname">Hostname</option>
+                                <option value="ipv4">IPv4</option>
+                                <option value="ipv6">IPv6</option>
+                              </>
+                            )}
+                            {(currentProperty.type === "number" || currentProperty.type === "integer") && (
+                              <>
+                                <option value="int32">int32</option>
+                                <option value="int64">int64</option>
+                                <option value="float">Float</option>
+                                <option value="double">Double</option>
+                              </>
+                            )}
+                          </select>
+                        </div>
+                      )}
                       
                       <div className="form-field" style={{ flex: 1 }}>
                         <label className="form-label">Description</label>
