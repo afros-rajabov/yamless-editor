@@ -70,11 +70,13 @@ const SchemaDialog = ({
   const [propertyTypeSearch, setPropertyTypeSearch] = useState("")
   const [itemsTypeSearch, setItemsTypeSearch] = useState("")
   const [compositionSchemaSearch, setCompositionSchemaSearch] = useState("")
+  const [propertyItemsTypeSearch, setPropertyItemsTypeSearch] = useState("")
   
   // Dropdown open states
   const [propertyDropdownOpen, setPropertyDropdownOpen] = useState(false)
   const [itemsDropdownOpen, setItemsDropdownOpen] = useState(false)
   const [compositionDropdownOpen, setCompositionDropdownOpen] = useState(false)
+  const [propertyItemsDropdownOpen, setPropertyItemsDropdownOpen] = useState(false)
   
   // Reusable styles for checkboxes
   const checkboxLabelStyle = { display: 'flex', alignItems: 'center', gap: '8px' }
@@ -292,9 +294,11 @@ const SchemaDialog = ({
     setPropertyTypeSearch("")
     setItemsTypeSearch("")
     setCompositionSchemaSearch("")
+    setPropertyItemsTypeSearch("")
     setPropertyDropdownOpen(false)
     setItemsDropdownOpen(false)
     setCompositionDropdownOpen(false)
+    setPropertyItemsDropdownOpen(false)
   }, [])
 
   const closeDialog = useCallback(() => {
@@ -799,23 +803,30 @@ const SchemaDialog = ({
                     {currentProperty.type === "array" && (
                       <div className="form-field" style={{ marginBottom: '12px' }}>
                         <label className="form-label">Items Type <span className="required">*</span></label>
-                        <select 
-                          className="form-input" 
-                          value={currentProperty.itemsType} 
-                          onChange={(e) => setCurrentProperty({...currentProperty, itemsType: e.target.value})}
-                        >
-                          <option value="string">String</option>
-                          <option value="number">Number</option>
-                          <option value="integer">Integer</option>
-                          <option value="boolean">Boolean</option>
-                          <option value="object">Object</option>
-                          <option value="array">Array</option>
-                          {Object.keys(schemas).map(schemaKey => (
-                            <option key={schemaKey} value={`#/components/schemas/${schemaKey}`}>
-                              {schemaKey} (Reference)
-                            </option>
-                          ))}
-                        </select>
+                        <SearchableSelect
+                          value={currentProperty.itemsType}
+                          onChange={(value) => setCurrentProperty({...currentProperty, itemsType: value})}
+                          placeholder="Select items type..."
+                          searchValue={propertyItemsTypeSearch}
+                          onSearchChange={setPropertyItemsTypeSearch}
+                          isOpen={propertyItemsDropdownOpen}
+                          onToggle={setPropertyItemsDropdownOpen}
+                          displayValue={currentProperty.itemsType.startsWith('#/components/schemas/') 
+                            ? currentProperty.itemsType.replace('#/components/schemas/', '') 
+                            : currentProperty.itemsType}
+                          primitiveOptions={[
+                            { value: "string", label: "String" },
+                            { value: "number", label: "Number" },
+                            { value: "integer", label: "Integer" },
+                            { value: "boolean", label: "Boolean" },
+                            { value: "object", label: "Object" },
+                            { value: "array", label: "Array" }
+                          ]}
+                          options={filterSchemas(propertyItemsTypeSearch).map(schemaKey => ({
+                            value: `#/components/schemas/${schemaKey}`,
+                            label: schemaKey
+                          }))}
+                        />
                       </div>
                     )}
                     
