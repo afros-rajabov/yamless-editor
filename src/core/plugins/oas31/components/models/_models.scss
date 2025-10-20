@@ -9,3 +9,77 @@
   width: calc(100% - 40px);
   overflow-x: auto;
 }
+
+// Delete dialog styles
+.delete-error-box {
+  padding: 16px;
+  background-color: #ffebee;
+  border: 1px solid #ffcdd2;
+  border-radius: 4px;
+  margin-bottom: 20px;
+}
+
+.delete-error-content {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.delete-error-icon {
+  font-size: 20px;
+  color: #d32f2f;
+  line-height: 1;
+}
+
+.delete-error-title {
+  margin: 0 0 8px 0;
+  color: #d32f2f;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.delete-error-message {
+  margin: 0;
+  color: #d32f2f;
+  font-size: 14px;
+  line-height: 1.5;
+  white-space: pre-line;
+}
+
+.delete-confirmation-content {
+  padding: 20px 0;
+  text-align: center;
+}
+
+.delete-confirmation-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+  opacity: 0.7;
+}
+
+.delete-confirmation-title {
+  margin: 0 0 12px 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #333;
+}
+
+.delete-confirmation-message {
+  margin: 0 0 16px 0;
+  font-size: 16px;
+  color: #555;
+  line-height: 1.5;
+}
+
+.delete-schema-name {
+  color: #1976d2;
+}
+
+.delete-warning-box {
+  padding: 12px 16px;
+  background-color: #fff3e0;
+  border: 1px solid #ffcc02;
+  border-radius: 4px;
+  font-size: 14px;
+  color: #e65100;
+}

@@ -22,6 +22,9 @@ const Models = ({
   const isOpenDefault = defaultModelsExpandDepth > 0 && docExpansion !== "none"
   const isOpen = layoutSelectors.isShown(schemasPath, isOpenDefault)
   const [showDialog, setShowDialog] = useState(false)
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+  const [deleteSchemaName, setDeleteSchemaName] = useState("")
+  const [deleteError, setDeleteError] = useState("")
   const Collapse = getComponent("Collapse")
   const JSONSchema202012 = getComponent("JSONSchema202012")
   const ArrowUpIcon = getComponent("ArrowUpIcon")
@@ -92,6 +95,45 @@ const Models = ({
       const references = []
       const schemaRef = `#/components/schemas/${schemaName}`
 
+      // Helper function to format usage location in a more readable way
+      const formatUsageLocation = (path) => {
+        const pathArray = path.split('.')
+        
+        // Handle different types of usage
+        if (pathArray[0] === 'paths') {
+          // API endpoint usage: paths./api/v1/users.post.responses.200
+          const endpoint = pathArray[1]
+          const method = pathArray[2]
+          const type = pathArray[3] // requestBody, responses, parameters
+          const status = pathArray[4] // for responses
+          const content = pathArray[5] // content type
+          
+          if (type === 'responses' && status && content) {
+            return `API ${method.toUpperCase()} ${endpoint} → Response ${status}`
+          } else if (type === 'requestBody' && content) {
+            return `API ${method.toUpperCase()} ${endpoint} → Request Body`
+          } else if (type === 'parameters') {
+            return `API ${method.toUpperCase()} ${endpoint} → Parameter`
+          }
+          return `API ${method.toUpperCase()} ${endpoint}`
+        } else if (pathArray[0] === 'components' && pathArray[1] === 'schemas') {
+          // Schema composition usage
+          const schemaName = pathArray[2]
+          const property = pathArray[4]
+          const composition = pathArray[5] // anyOf, oneOf, allOf
+          
+          if (composition) {
+            return `Schema "${schemaName}" → Property "${property}" (${composition})`
+          } else if (property) {
+            return `Schema "${schemaName}" → Property "${property}"`
+          }
+          return `Schema "${schemaName}"`
+        }
+        
+        // Fallback to simplified path
+        return pathArray.slice(0, 3).join(' → ')
+      }
+
       // Helper function to recursively search for references
       const searchForRefs = (obj, path = []) => {
         if (typeof obj !== 'object' || obj === null) return
@@ -106,9 +148,10 @@ const Models = ({
             
             // Check if this is a $ref to our schema
             if (key === '$ref' && value === schemaRef) {
+              const fullPath = currentPath.slice(0, -1).join('.')
               references.push({
-                path: currentPath.join('.'),
-                location: currentPath.slice(0, -1).join('.')
+                path: fullPath,
+                location: formatUsageLocation(fullPath)
               })
             }
             
@@ -139,19 +182,31 @@ const Models = ({
       const references = checkSchemaReferences(schemaName)
       
       if (references.length > 0) {
-        // Show error message with locations
-        const locations = references.map(ref => ref.location).join(', ')
-        alert(`Cannot delete schema "${schemaName}" because it is referenced in:\n${locations}\n\nPlease remove these references first.`)
+        // Show error message with locations formatted as a list
+        const locationsList = references.map(ref => `• ${ref.location}`).join('\n')
+        setDeleteError(`Cannot delete schema "${schemaName}" because it is referenced in the following locations:\n\n${locationsList}\n\nPlease remove these references first.`)
+        setDeleteSchemaName(schemaName)
+        setShowDeleteDialog(true)
         return
       }
 
       // Show confirmation dialog
-      const confirmed = window.confirm(`Are you sure you want to delete the schema "${schemaName}"? This action cannot be undone.`)
-      
-      if (!confirmed) {
-        return
-      }
+      setDeleteError("")
+      setDeleteSchemaName(schemaName)
+      setShowDeleteDialog(true)
+    } catch (e) {
+      console.error("Error deleting schema:", e)
+      setDeleteError("Failed to delete schema. Please try again.")
+      setDeleteSchemaName(schemaName)
+      setShowDeleteDialog(true)
+    }
+  }, [checkSchemaReferences])
 
+  /**
+   * Confirm schema deletion
+   */
+  const confirmDeleteSchema = useCallback(() => {
+    try {
       // Delete the schema
       const spec = specSelectors.specJson()
       const js = spec && typeof spec.toJS === "function" ? spec.toJS() : {}
@@ -159,7 +214,7 @@ const Models = ({
       
       // Ensure components.schemas exists
       if (next.components && next.components.schemas) {
-        delete next.components.schemas[schemaName]
+        delete next.components.schemas[deleteSchemaName]
         
         // If no schemas left, clean up empty objects
         if (Object.keys(next.components.schemas).length === 0) {
@@ -172,11 +227,25 @@ const Models = ({
         const asString = JSON.stringify(next, null, 2)
         specActions.updateSpec(asString)
       }
+      
+      // Close dialog
+      setShowDeleteDialog(false)
+      setDeleteSchemaName("")
+      setDeleteError("")
     } catch (e) {
       console.error("Error deleting schema:", e)
-      alert("Failed to delete schema. Please try again.")
+      setDeleteError("Failed to delete schema. Please try again.")
     }
-  }, [checkSchemaReferences, specSelectors, specActions])
+  }, [deleteSchemaName, specSelectors, specActions])
+
+  /**
+   * Cancel schema deletion
+   */
+  const cancelDeleteSchema = useCallback(() => {
+    setShowDeleteDialog(false)
+    setDeleteSchemaName("")
+    setDeleteError("")
+  }, [])
 
   const handleAddSchema = useCallback((schemaName, schemaData, schemaMode) => {
     try {
@@ -377,6 +446,64 @@ const Models = ({
         schemas={schemas}
         getComponent={getComponent}
       />
+      {showDeleteDialog && (
+        <div className="dialog-ux">
+          <div className="backdrop-ux" onClick={cancelDeleteSchema}></div>
+          <div className="modal-ux delete-schema-dialog">
+            <div className="modal-dialog-ux">
+              <div className="modal-ux-inner">
+                <div className="modal-ux-header">
+                  <h3>{deleteError ? "Cannot Delete Schema" : "Delete Schema"}</h3>
+                  <button type="button" className="close-modal" onClick={cancelDeleteSchema}>
+                    ✕
+                  </button>
+                </div>
+                <div className="modal-ux-content">
+                  {deleteError ? (
+                    <div>
+                      <div className="delete-error-box">
+                        <div className="delete-error-content">
+                          <div className="delete-error-icon">⚠️</div>
+                          <div>
+                            <h4 className="delete-error-title">
+                              Schema Cannot Be Deleted
+                            </h4>
+                            <p className="delete-error-message">
+                              {deleteError}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="modal-actions-row">
+                        <button className="btn modal-btn" onClick={cancelDeleteSchema}>Close</button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div>
+                      <div className="delete-confirmation-content">
+                        <div className="delete-confirmation-icon">🗑️</div>
+                        <h4 className="delete-confirmation-title">
+                          Delete Schema
+                        </h4>
+                        <p className="delete-confirmation-message">
+                          Are you sure you want to delete the schema <strong className="delete-schema-name">"{deleteSchemaName}"</strong>?
+                        </p>
+                        <div className="delete-warning-box">
+                          ⚠️ This action cannot be undone.
+                        </div>
+                      </div>
+                      <div className="modal-actions-row">
+                        <button className="btn modal-btn" onClick={cancelDeleteSchema}>Cancel</button>
+                        <button className="btn btn-danger modal-btn" onClick={confirmDeleteSchema}>Delete Schema</button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   )
 }
