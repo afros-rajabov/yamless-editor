@@ -1,7 +1,7 @@
 /**
  * @prettier
  */
-import React, { useCallback, useState } from "react"
+import React, { useCallback, useState, useRef, useEffect } from "react"
 import PropTypes from "prop-types"
 
 const SchemaDialog = ({
@@ -66,6 +66,16 @@ const SchemaDialog = ({
     type: "string"
   })
   
+  // Search filters for schema dropdowns
+  const [propertyTypeSearch, setPropertyTypeSearch] = useState("")
+  const [itemsTypeSearch, setItemsTypeSearch] = useState("")
+  const [compositionSchemaSearch, setCompositionSchemaSearch] = useState("")
+  
+  // Dropdown open states
+  const [propertyDropdownOpen, setPropertyDropdownOpen] = useState(false)
+  const [itemsDropdownOpen, setItemsDropdownOpen] = useState(false)
+  const [compositionDropdownOpen, setCompositionDropdownOpen] = useState(false)
+  
   // Reusable styles for checkboxes
   const checkboxLabelStyle = { display: 'flex', alignItems: 'center', gap: '8px' }
   const checkboxInputStyle = { 
@@ -76,6 +86,136 @@ const SchemaDialog = ({
   
   const CloseIcon = getComponent("CloseIcon")
   const Button = getComponent("Button")
+  
+  // Helper function to filter schemas based on search input
+  const filterSchemas = useCallback((searchTerm) => {
+    if (!searchTerm.trim()) return Object.keys(schemas)
+    return Object.keys(schemas).filter(key => 
+      key.toLowerCase().includes(searchTerm.toLowerCase())
+    )
+  }, [schemas])
+
+  // Custom SearchableSelect component
+  const SearchableSelect = ({ 
+    value, 
+    onChange, 
+    placeholder, 
+    searchValue, 
+    onSearchChange, 
+    isOpen, 
+    onToggle,
+    options,
+    primitiveOptions = [],
+    displayValue
+  }) => {
+    const dropdownRef = useRef(null)
+    const searchInputRef = useRef(null)
+    
+    // Close dropdown when clicking outside
+    useEffect(() => {
+      const handleClickOutside = (event) => {
+        if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+          onToggle(false)
+        }
+      }
+      document.addEventListener('mousedown', handleClickOutside)
+      return () => document.removeEventListener('mousedown', handleClickOutside)
+    }, [onToggle])
+    
+    // Focus search input when dropdown opens
+    useEffect(() => {
+      if (isOpen && searchInputRef.current) {
+        searchInputRef.current.focus()
+      }
+    }, [isOpen])
+    
+    // Combine all options and filter them
+    const allOptions = [...primitiveOptions, ...options]
+    const filteredOptions = allOptions.filter(option => 
+      option.label.toLowerCase().includes(searchValue.toLowerCase())
+    )
+    
+    return (
+      <div ref={dropdownRef} style={{ position: 'relative', width: '100%' }}>
+        <div 
+          className="form-input" 
+          style={{ 
+            cursor: 'pointer', 
+            display: 'flex', 
+            justifyContent: 'space-between', 
+            alignItems: 'center',
+            backgroundColor: '#fff'
+          }}
+          onClick={() => onToggle(!isOpen)}
+        >
+          <span>{displayValue || value || placeholder}</span>
+          <span style={{ transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}>
+            ▼
+          </span>
+        </div>
+        
+        {isOpen && (
+          <div style={{
+            position: 'absolute',
+            top: '100%',
+            left: 0,
+            right: 0,
+            backgroundColor: '#fff',
+            border: '1px solid #ccc',
+            borderRadius: '4px',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+            zIndex: 1000,
+            maxHeight: '200px',
+            overflow: 'hidden'
+          }}>
+            <div style={{ padding: '8px', borderBottom: '1px solid #eee' }}>
+              <input
+                ref={searchInputRef}
+                type="text"
+                placeholder="Search..."
+                value={searchValue}
+                onChange={(e) => onSearchChange(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '6px 8px',
+                  border: '1px solid #ddd',
+                  borderRadius: '3px',
+                  fontSize: '14px'
+                }}
+                onClick={(e) => e.stopPropagation()}
+                onMouseDown={(e) => e.stopPropagation()}
+              />
+            </div>
+            <div style={{ maxHeight: '150px', overflowY: 'auto' }}>
+              {filteredOptions.map(option => (
+                <div
+                  key={option.value}
+                  style={{
+                    padding: '8px 12px',
+                    cursor: 'pointer',
+                    backgroundColor: value === option.value ? '#f0f8ff' : 'transparent',
+                    borderBottom: '1px solid #f0f0f0'
+                  }}
+                  onClick={() => {
+                    onChange(option.value)
+                    onSearchChange("") // Reset search input when option is selected
+                    onToggle(false)
+                  }}
+                >
+                  {option.label}
+                </div>
+              ))}
+              {filteredOptions.length === 0 && searchValue && (
+                <div style={{ padding: '8px 12px', color: '#666', fontStyle: 'italic' }}>
+                  No matching options found
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    )
+  }
 
   const resetForm = useCallback(() => {
     setSchemaName("")
@@ -132,6 +272,12 @@ const SchemaDialog = ({
       value: "",
       type: "string"
     })
+    setPropertyTypeSearch("")
+    setItemsTypeSearch("")
+    setCompositionSchemaSearch("")
+    setPropertyDropdownOpen(false)
+    setItemsDropdownOpen(false)
+    setCompositionDropdownOpen(false)
   }, [])
 
   const closeDialog = useCallback(() => {
@@ -439,23 +585,27 @@ const SchemaDialog = ({
                   <div className="form-field">
                     <label className="form-label">Member Schemas</label>
                     <div className="schema-selection">
-                      <select 
-                        className="form-input" 
-                        onChange={(e) => {
-                          if (e.target.value && !schemaData.compositionSchemas.includes(e.target.value)) {
+                      <SearchableSelect
+                        value=""
+                        onChange={(value) => {
+                          if (value && !schemaData.compositionSchemas.includes(value)) {
                             setSchemaData({
                               ...schemaData, 
-                              compositionSchemas: [...schemaData.compositionSchemas, e.target.value]
+                              compositionSchemas: [...schemaData.compositionSchemas, value]
                             })
                           }
-                          e.target.value = ""
                         }}
-                      >
-                        <option value="">Select existing schema...</option>
-                        {Object.keys(schemas).map(schemaKey => (
-                          <option key={schemaKey} value={schemaKey}>{schemaKey}</option>
-                        ))}
-                      </select>
+                        placeholder="Select existing schema..."
+                        searchValue={compositionSchemaSearch}
+                        onSearchChange={setCompositionSchemaSearch}
+                        isOpen={compositionDropdownOpen}
+                        onToggle={setCompositionDropdownOpen}
+                        primitiveOptions={[]}
+                        options={filterSchemas(compositionSchemaSearch).map(schemaKey => ({
+                          value: schemaKey,
+                          label: schemaKey
+                        }))}
+                      />
                       <div className="selected-schemas">
                         {schemaData.compositionSchemas.map((schema, index) => (
                           <div key={index} className="selected-schema">
@@ -555,23 +705,30 @@ const SchemaDialog = ({
                       
                       <div className="form-field" style={{ flex: 1 }}>
                         <label className="form-label">Property Type <span className="required">*</span></label>
-                        <select 
-                          className="form-input" 
-                          value={currentProperty.type} 
-                          onChange={(e) => setCurrentProperty({...currentProperty, type: e.target.value, format: ""})}
-                        >
-                          <option value="string">String</option>
-                          <option value="number">Number</option>
-                          <option value="integer">Integer</option>
-                          <option value="boolean">Boolean</option>
-                          <option value="array">Array</option>
-                          <option value="object">Object</option>
-                          {Object.keys(schemas).map(schemaKey => (
-                            <option key={schemaKey} value={`#/components/schemas/${schemaKey}`}>
-                              {schemaKey} (Reference)
-                            </option>
-                          ))}
-                        </select>
+                        <SearchableSelect
+                          value={currentProperty.type}
+                          onChange={(value) => setCurrentProperty({...currentProperty, type: value, format: ""})}
+                          placeholder="Select property type..."
+                          searchValue={propertyTypeSearch}
+                          onSearchChange={setPropertyTypeSearch}
+                          isOpen={propertyDropdownOpen}
+                          onToggle={setPropertyDropdownOpen}
+                          displayValue={currentProperty.type.startsWith('#/components/schemas/') 
+                            ? currentProperty.type.replace('#/components/schemas/', '') 
+                            : currentProperty.type}
+                          primitiveOptions={[
+                            { value: "string", label: "String" },
+                            { value: "number", label: "Number" },
+                            { value: "integer", label: "Integer" },
+                            { value: "boolean", label: "Boolean" },
+                            { value: "array", label: "Array" },
+                            { value: "object", label: "Object" }
+                          ]}
+                          options={filterSchemas(propertyTypeSearch).map(schemaKey => ({
+                            value: `#/components/schemas/${schemaKey}`,
+                            label: schemaKey
+                          }))}
+                        />
                       </div>
                     </div>
                     
@@ -673,23 +830,30 @@ const SchemaDialog = ({
                   
                   <div className="form-field">
                     <label className="form-label">Items Type <span className="required">*</span></label>
-                    <select 
-                      className="form-input" 
-                      value={schemaData.itemsType} 
-                      onChange={(e) => setSchemaData({...schemaData, itemsType: e.target.value})}
-                    >
-                      <option value="string">String</option>
-                      <option value="number">Number</option>
-                      <option value="integer">Integer</option>
-                      <option value="boolean">Boolean</option>
-                      <option value="object">Object</option>
-                      <option value="array">Array</option>
-                      {Object.keys(schemas).map(schemaKey => (
-                        <option key={schemaKey} value={`#/components/schemas/${schemaKey}`}>
-                          {schemaKey} (Reference)
-                        </option>
-                      ))}
-                    </select>
+                    <SearchableSelect
+                      value={schemaData.itemsType}
+                      onChange={(value) => setSchemaData({...schemaData, itemsType: value})}
+                      placeholder="Select items type..."
+                      searchValue={itemsTypeSearch}
+                      onSearchChange={setItemsTypeSearch}
+                      isOpen={itemsDropdownOpen}
+                      onToggle={setItemsDropdownOpen}
+                      displayValue={schemaData.itemsType.startsWith('#/components/schemas/') 
+                        ? schemaData.itemsType.replace('#/components/schemas/', '') 
+                        : schemaData.itemsType}
+                      primitiveOptions={[
+                        { value: "string", label: "String" },
+                        { value: "number", label: "Number" },
+                        { value: "integer", label: "Integer" },
+                        { value: "boolean", label: "Boolean" },
+                        { value: "object", label: "Object" },
+                        { value: "array", label: "Array" }
+                      ]}
+                      options={filterSchemas(itemsTypeSearch).map(schemaKey => ({
+                        value: `#/components/schemas/${schemaKey}`,
+                        label: schemaKey
+                      }))}
+                    />
                   </div>
                 </div>
               )}
