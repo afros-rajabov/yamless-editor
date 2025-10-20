@@ -276,7 +276,15 @@ const SchemaDialog = ({
       return
     }
     
-    onAddSchema(schemaName.trim(), schemaData, schemaMode)
+    // Set default values for array types
+    let processedSchemaData = { ...schemaData }
+    
+    // If schema is array type, set default to empty array
+    if (processedSchemaData.type === "array") {
+      processedSchemaData.default = []
+    }
+    
+    onAddSchema(schemaName.trim(), processedSchemaData, schemaMode)
     closeDialog()
   }, [schemaName, schemaData, schemaMode, validateForm, onAddSchema, closeDialog])
 
