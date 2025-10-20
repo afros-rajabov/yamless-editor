@@ -75,6 +75,9 @@ const Models = ({
     value: "",
     type: "string"
   })
+  
+  // Reusable styles for checkboxes
+  const checkboxLabelStyle = { display: 'flex', alignItems: 'center', gap: '8px' }
   const Collapse = getComponent("Collapse")
   const JSONSchema202012 = getComponent("JSONSchema202012")
   const ArrowUpIcon = getComponent("ArrowUpIcon")
@@ -855,7 +858,7 @@ const Models = ({
                         )}
                         
                         <div style={{ display: 'flex', gap: '15px', alignItems: 'center', marginBottom: '12px' }}>
-                          <label>
+                          <label style={checkboxLabelStyle}>
                             <input 
                               type="checkbox" 
                               checked={currentProperty.required} 
@@ -1000,7 +1003,7 @@ const Models = ({
                     
                     <div className="form-field">
                       <div style={{ display: 'flex', gap: '20px' }}>
-                        <label>
+                        <label style={checkboxLabelStyle}>
                           <input 
                             type="checkbox" 
                             checked={schemaData.nullable} 
@@ -1009,7 +1012,7 @@ const Models = ({
                           Nullable (value can be null)
                         </label>
                         
-                        <label>
+                        <label style={checkboxLabelStyle}>
                           <input 
                             type="checkbox" 
                             checked={schemaData.deprecated} 
