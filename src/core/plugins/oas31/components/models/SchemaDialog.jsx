@@ -84,16 +84,6 @@ const SchemaDialog = ({
   const [compositionDropdownOpen, setCompositionDropdownOpen] = useState(false)
   const [propertyItemsDropdownOpen, setPropertyItemsDropdownOpen] = useState(false)
   
-  // Reusable styles for checkboxes
-  const checkboxLabelStyle = { display: 'flex', alignItems: 'center', gap: '8px' }
-  const checkboxInputStyle = { 
-    width: '16px', 
-    height: '16px', 
-    cursor: 'pointer' 
-  }
-  
-  const CloseIcon = getComponent("CloseIcon")
-  const Button = getComponent("Button")
   
   // Safe helper function to extract schema name from reference
   const safeExtractSchemaName = useCallback((ref) => {
@@ -243,9 +233,6 @@ const SchemaDialog = ({
               .map(item => {
                 const ref = item.$ref || item.$$ref
                 const extracted = safeExtractSchemaName(ref)
-                if (process.env.NODE_ENV === 'development') {
-                  console.log('Processing anyOf item:', item, 'ref:', ref, 'extracted:', extracted)
-                }
                 return extracted
               })
               .filter(schemaName => schemaName) // Remove empty strings from invalid references
@@ -265,32 +252,21 @@ const SchemaDialog = ({
               .filter(schemaName => schemaName) // Remove empty strings from invalid references
           }
         } else {
+          const ref = propSchema.$ref || propSchema.$$ref
           // Handle direct schema reference
-          if (propSchema.$ref) {
-            property.type = propSchema.$ref
+          if (ref) {
+            property.type = ref
           } else {
             property.type = propSchema.type || "string"
           }
         }
         
-        // Debug logging to help identify issues
-        if (process.env.NODE_ENV === 'development') {
-          console.log('Parsed property:', propName, property)
-          console.log('Original propSchema:', propSchema)
-          if (propSchema.anyOf || propSchema.oneOf || propSchema.allOf) {
-            console.log('Composition detected for', propName, ':', {
-              anyOf: propSchema.anyOf,
-              oneOf: propSchema.oneOf,
-              allOf: propSchema.allOf
-            })
-            console.log('Final compositionSchemas for', propName, ':', property.compositionSchemas)
-          }
-        }
-        
         // Handle array items
         if (propSchema.type === "array" && propSchema.items) {
-          if (propSchema.items.$ref) {
-            property.itemsType = safeExtractSchemaName(propSchema.items.$ref)
+          const ref = propSchema.$ref || propSchema.$$ref
+          // Handle direct schema reference
+          if (ref) {
+            property.itemsType = ref
           } else {
             property.itemsType = propSchema.items.type || "string"
           }
@@ -360,12 +336,6 @@ const SchemaDialog = ({
     if (initialData && showDialog) {
       try {
         const parsedData = parseSchemaToDialogFormat(initialData)
-        
-        // Debug logging
-        if (process.env.NODE_ENV === 'development') {
-          console.log('Initial data:', initialData)
-          console.log('Parsed data:', parsedData)
-        }
         
         // Determine mode based on schema structure
         const hasComposition = initialData.anyOf || initialData.oneOf || initialData.allOf
@@ -689,6 +659,18 @@ const SchemaDialog = ({
     closeDialog()
   }, [schemaName, schemaData, schemaMode, validateForm, onAddSchema, closeDialog])
 
+  
+  // Reusable styles for checkboxes
+  const checkboxLabelStyle = { display: 'flex', alignItems: 'center', gap: '8px' }
+  const checkboxInputStyle = { 
+    width: '16px', 
+    height: '16px', 
+    cursor: 'pointer' 
+  }
+  
+  const CloseIcon = getComponent("CloseIcon")
+  const Button = getComponent("Button")
+  
   if (!showDialog) {
     return null
   }
@@ -917,7 +899,7 @@ const SchemaDialog = ({
                                   return `(${compositionType}: ${schemas}${property.required ? ', required' : ''})`
                                 })()
                               ) : (
-                                `(${property.type.startsWith('#/components/schemas/') 
+                                `(${property.type.includes('#/components/schemas/') 
                                   ? safeExtractSchemaName(property.type) 
                                   : property.type}${property.format && `, ${property.format}`}${property.required && ', required'})`
                               )}

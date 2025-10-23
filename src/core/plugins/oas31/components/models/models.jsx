@@ -56,28 +56,12 @@ const Models = ({
   const handleModelsExpand = useCallback(() => {
     layoutActions.show(schemasPath, !isOpen)
   }, [isOpen])
+
   const handleModelsRef = useCallback((node) => {
     if (node !== null) {
       layoutActions.readyToScroll(schemasPath, node)
     }
   }, [])
-  const handleJSONSchema202012Ref = (schemaName) => (node) => {
-    if (node !== null) {
-      layoutActions.readyToScroll([...schemasPath, schemaName], node)
-    }
-  }
-  const handleJSONSchema202012Expand = (schemaName) => (e, expanded) => {
-    const schemaPath = [...schemasPath, schemaName]
-    if (expanded) {
-      const isResolved = specSelectors.specResolvedSubtree(schemaPath) != null
-      if (!isResolved) {
-        specActions.requestResolvedSubtree([...schemasPath, schemaName])
-      }
-      layoutActions.show(schemaPath, true)
-    } else {
-      layoutActions.show(schemaPath, false)
-    }
-  }
 
   const openDialog = useCallback(() => {
     setShowDialog(true)
@@ -345,6 +329,7 @@ const Models = ({
                   if (prop.oneOf) propSchema.oneOf = prop.oneOf
                   if (prop.allOf) propSchema.allOf = prop.allOf
                 } else if (prop.type && prop.type.startsWith("#/components/schemas/")) {
+                  propSchema.$$ref = prop.type
                   propSchema.$ref = prop.type
                 } else if (prop.type) {
                   propSchema.type = prop.type
@@ -352,7 +337,7 @@ const Models = ({
                   // Handle array items
                   if (prop.type === "array" && prop.itemsType) {
                     if (prop.itemsType.startsWith("#/components/schemas/")) {
-                      propSchema.items = { $ref: prop.itemsType }
+                      propSchema.items = { $$ref: prop.itemsType, $ref: prop.itemsType }
                     } else {
                       propSchema.items = { type: prop.itemsType }
                     }
@@ -408,6 +393,26 @@ const Models = ({
       console.error("Error adding schema:", e)
     }
   }, [specSelectors, specActions])
+
+
+  const handleJSONSchema202012Ref = (schemaName) => (node) => {
+    if (node !== null) {
+      layoutActions.readyToScroll([...schemasPath, schemaName], node)
+    }
+  }
+  
+  const handleJSONSchema202012Expand = (schemaName) => (e, expanded) => {
+    const schemaPath = [...schemasPath, schemaName]
+    if (expanded) {
+      const isResolved = specSelectors.specResolvedSubtree(schemaPath) != null
+      if (!isResolved) {
+        specActions.requestResolvedSubtree([...schemasPath, schemaName])
+      }
+      layoutActions.show(schemaPath, true)
+    } else {
+      layoutActions.show(schemaPath, false)
+    }
+  }
 
   /**
    * Rendering.
