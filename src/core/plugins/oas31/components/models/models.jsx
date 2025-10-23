@@ -31,7 +31,7 @@ const Models = ({
   const JSONSchema202012 = getComponent("JSONSchema202012")
   const ArrowUpIcon = getComponent("ArrowUpIcon")
   const ArrowDownIcon = getComponent("ArrowDownIcon")
-  const { getTitle } = fn.jsonSchema202012.useFn()
+  const { getTitle } = fn.jsonSchema202012
 
   /**
    * Effects.
