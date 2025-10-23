@@ -5,6 +5,8 @@ import React, { useCallback, useState, useRef, useEffect } from "react"
 import PropTypes from "prop-types"
 import SearchableSelect from "./SearchableSelect"
 
+const refPrefix = "#/components/schemas/"
+
 const SchemaDialog = ({
   showDialog,
   onClose,
@@ -263,7 +265,7 @@ const SchemaDialog = ({
         
         // Handle array items
         if (propSchema.type === "array" && propSchema.items) {
-          const ref = propSchema.$ref || propSchema.$$ref
+          const ref = propSchema.items.$ref || propSchema.items.$$ref
           // Handle direct schema reference
           if (ref) {
             property.itemsType = ref
@@ -278,8 +280,9 @@ const SchemaDialog = ({
     
     // Handle array items
     if (rawSchema.type === "array" && rawSchema.items) {
-      if (rawSchema.items.$ref) {
-        parsed.itemsType = safeExtractSchemaName(rawSchema.items.$ref)
+      const ref = rawSchema.items.$ref || rawSchema.items.$$ref
+      if (ref) {
+        parsed.itemsType = `${refPrefix}${ref.split(refPrefix)[1]}`
       } else {
         parsed.itemsType = rawSchema.items.type || "string"
       }
@@ -581,7 +584,7 @@ const SchemaDialog = ({
     if (currentProperty.isComposition) {
       // For composition properties, add the composition keyword directly
       newProperty[currentProperty.compositionType] = currentProperty.compositionSchemas.map(schemaName => ({
-        $ref: `#/components/schemas/${schemaName}`
+        $ref: `${refPrefix}${schemaName}`
       }))
     } else {
       // For regular properties, add the type
@@ -899,7 +902,7 @@ const SchemaDialog = ({
                                   return `(${compositionType}: ${schemas}${property.required ? ', required' : ''})`
                                 })()
                               ) : (
-                                `(${property.type.includes('#/components/schemas/') 
+                                `(${property.type.includes(refPrefix) 
                                   ? safeExtractSchemaName(property.type) 
                                   : property.type}${property.format && `, ${property.format}`}${property.required && ', required'})`
                               )}
@@ -976,7 +979,7 @@ const SchemaDialog = ({
                           isOpen={propertyDropdownOpen}
                           onToggle={setPropertyDropdownOpen}
                           disabled={currentProperty.isComposition}
-                          displayValue={currentProperty.type.startsWith('#/components/schemas/') 
+                          displayValue={currentProperty.type.includes(refPrefix) 
                             ? safeExtractSchemaName(currentProperty.type) 
                             : currentProperty.type}
                           primitiveOptions={[
@@ -988,7 +991,7 @@ const SchemaDialog = ({
                             { value: "object", label: "Object" }
                           ]}
                           options={filterSchemas(propertyTypeSearch).map(schemaKey => ({
-                            value: `#/components/schemas/${schemaKey}`,
+                            value: `${refPrefix}${schemaKey}`,
                             label: schemaKey
                           }))}
                         />
@@ -1064,14 +1067,16 @@ const SchemaDialog = ({
                       <div className="form-field" style={{ marginBottom: '12px' }}>
                         <label className="form-label">Items Type <span className="required">*</span></label>
                         <SearchableSelect
-                          value={currentProperty.itemsType}
+                          value={
+                            currentProperty.itemsType
+                          }
                           onChange={(value) => setCurrentProperty({...currentProperty, itemsType: value})}
                           placeholder="Select items type..."
                           searchValue={propertyItemsTypeSearch}
                           onSearchChange={setPropertyItemsTypeSearch}
                           isOpen={propertyItemsDropdownOpen}
                           onToggle={setPropertyItemsDropdownOpen}
-                          displayValue={currentProperty.itemsType.startsWith('#/components/schemas/') 
+                          displayValue={currentProperty.itemsType.includes(refPrefix) 
                             ? safeExtractSchemaName(currentProperty.itemsType) 
                             : currentProperty.itemsType}
                           primitiveOptions={[
@@ -1083,7 +1088,7 @@ const SchemaDialog = ({
                             { value: "array", label: "Array" }
                           ]}
                           options={filterSchemas(propertyItemsTypeSearch).map(schemaKey => ({
-                            value: `#/components/schemas/${schemaKey}`,
+                            value: `${refPrefix}${schemaKey}`,
                             label: schemaKey
                           }))}
                         />
@@ -1175,7 +1180,7 @@ const SchemaDialog = ({
                       onSearchChange={setItemsTypeSearch}
                       isOpen={itemsDropdownOpen}
                       onToggle={setItemsDropdownOpen}
-                      displayValue={schemaData.itemsType.startsWith('#/components/schemas/') 
+                      displayValue={schemaData.itemsType.includes(refPrefix) 
                         ? safeExtractSchemaName(schemaData.itemsType) 
                         : schemaData.itemsType}
                       primitiveOptions={[
@@ -1187,7 +1192,7 @@ const SchemaDialog = ({
                         { value: "array", label: "Array" }
                       ]}
                       options={filterSchemas(itemsTypeSearch).map(schemaKey => ({
-                        value: `#/components/schemas/${schemaKey}`,
+                        value: `${refPrefix}${schemaKey}`,
                         label: schemaKey
                       }))}
                     />
