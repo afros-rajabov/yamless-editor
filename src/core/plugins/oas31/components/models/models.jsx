@@ -356,6 +356,7 @@ const Models = ({
                     } else {
                       propSchema.items = { type: prop.itemsType }
                     }
+                    propSchema.default = []
                   }
                 }
                 
