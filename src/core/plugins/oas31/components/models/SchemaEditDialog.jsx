@@ -55,7 +55,9 @@ const SchemaEditDialog = ({
     deprecated: false,
     nullable: false,
     compositionType: "anyOf",
-    compositionSchemas: []
+    compositionSchemas: [],
+    enumType: "string",
+    enumFormat: ""
   })
   const [validationErrors, setValidationErrors] = useState({})
   const [currentProperty, setCurrentProperty] = useState({
@@ -70,8 +72,7 @@ const SchemaEditDialog = ({
     compositionSchemas: []
   })
   const [currentEnumValue, setCurrentEnumValue] = useState({
-    value: "",
-    type: "string"
+    value: ""
   })
   
   // Search filters for schema dropdowns
@@ -187,7 +188,9 @@ const SchemaEditDialog = ({
       deprecated: rawSchema.deprecated || false,
       nullable: rawSchema.nullable || false,
       compositionType: "anyOf",
-      compositionSchemas: []
+      compositionSchemas: [],
+      enumType: "string",
+      enumFormat: ""
     }
     
     // Handle composition schemas
@@ -291,6 +294,15 @@ const SchemaEditDialog = ({
       }
     }
     
+    // Handle enum schemas - detect by presence of enum array
+    if (rawSchema.enum && Array.isArray(rawSchema.enum) && rawSchema.enum.length > 0) {
+      // Set type to enum for UI purposes
+      parsed.type = "enum"
+      // Extract the actual type and format from the schema
+      parsed.enumType = rawSchema.type || "string"
+      parsed.enumFormat = rawSchema.format || ""
+    }
+    
       return parsed
     } catch (error) {
       console.error('Error parsing schema:', error)
@@ -332,7 +344,9 @@ const SchemaEditDialog = ({
         deprecated: false,
         nullable: false,
         compositionType: "anyOf",
-        compositionSchemas: []
+        compositionSchemas: [],
+        enumType: "string",
+        enumFormat: ""
       }
     }
   }, [])
@@ -456,7 +470,9 @@ const SchemaEditDialog = ({
       deprecated: false,
       nullable: false,
       compositionType: "anyOf",
-      compositionSchemas: []
+      compositionSchemas: [],
+      enumType: "string",
+      enumFormat: ""
     })
     setValidationErrors({})
     setCurrentProperty({
@@ -471,8 +487,7 @@ const SchemaEditDialog = ({
       compositionSchemas: []
     })
     setCurrentEnumValue({
-      value: "",
-      type: "string"
+      value: ""
     })
     setPropertyTypeSearch("")
     setItemsTypeSearch("")
@@ -622,7 +637,7 @@ const SchemaEditDialog = ({
     
     // Check for duplicate enum values
     const existingValue = currentSchemaData.enum.find(enumItem => {
-      const currentValue = currentEnumValue.type === "number" ? parseFloat(currentEnumValue.value) : currentEnumValue.value.trim()
+      const currentValue = (currentSchemaData.enumType === "number" || currentSchemaData.enumType === "integer") ? parseFloat(currentEnumValue.value) : currentEnumValue.value.trim()
       return enumItem === currentValue
     })
     if (existingValue && editingEnumIndex === null) {
@@ -634,7 +649,7 @@ const SchemaEditDialog = ({
     setValidationErrors(prev => ({ ...prev, enumValue: undefined }))
     
     // Add or update enum value to schema data
-    const newValue = currentEnumValue.type === "number" ? parseFloat(currentEnumValue.value) : currentEnumValue.value.trim()
+    const newValue = (currentSchemaData.enumType === "number" || currentSchemaData.enumType === "integer") ? parseFloat(currentEnumValue.value) : currentEnumValue.value.trim()
     
     let updatedEnum
     if (editingEnumIndex !== null) {
@@ -653,8 +668,7 @@ const SchemaEditDialog = ({
     
     // Reset form
     setCurrentEnumValue({
-      value: "",
-      type: "string"
+      value: ""
     })
     setEditingEnumIndex(null)
   }, [currentEnumValue, currentSchemaData, editingEnumIndex])
@@ -695,8 +709,7 @@ const SchemaEditDialog = ({
   const handleEditEnumValue = useCallback((index) => {
     const enumValue = currentSchemaData.enum[index]
     setCurrentEnumValue({
-      value: typeof enumValue === 'number' ? enumValue.toString() : enumValue,
-      type: typeof enumValue === 'number' ? 'number' : 'string'
+      value: typeof enumValue === 'number' ? enumValue.toString() : enumValue
     })
     setEditingEnumIndex(index)
   }, [currentSchemaData.enum])
@@ -714,8 +727,7 @@ const SchemaEditDialog = ({
       compositionSchemas: []
     })
     setCurrentEnumValue({
-      value: "",
-      type: "string"
+      value: ""
     })
     setEditingPropertyIndex(null)
     setEditingEnumIndex(null)
@@ -1245,6 +1257,55 @@ const SchemaEditDialog = ({
                 <div className="form-section">
                   <h4>Enum Values</h4>
                   
+                  {/* Enum Type and Format Selection */}
+                  <div style={{ display: 'flex', gap: '15px', marginBottom: '20px' }}>
+                    <div className="form-field" style={{ flex: 1 }}>
+                      <label className="form-label">Enum Type <span className="required">*</span></label>
+                      <select 
+                        className="form-input" 
+                        value={currentSchemaData.enumType} 
+                        disabled={true}
+                        style={{ backgroundColor: '#f5f5f5', cursor: 'not-allowed' }}
+                      >
+                        <option value="string">String</option>
+                        <option value="number">Number</option>
+                        <option value="integer">Integer</option>
+                      </select>
+                    </div>
+                    
+                    <div className="form-field" style={{ flex: 1 }}>
+                      <label className="form-label">Format</label>
+                      <select 
+                        className="form-input" 
+                        value={currentSchemaData.enumFormat} 
+                        onChange={(e) => setCurrentSchemaData({...currentSchemaData, enumFormat: e.target.value})}
+                      >
+                        <option value="">None</option>
+                        {currentSchemaData.enumType === "string" && (
+                          <>
+                            <option value="date">Date</option>
+                            <option value="date-time">Date-Time</option>
+                            <option value="email">Email</option>
+                            <option value="uri">URI</option>
+                            <option value="uuid">UUID</option>
+                            <option value="password">Password</option>
+                            <option value="hostname">Hostname</option>
+                            <option value="ipv4">IPv4</option>
+                            <option value="ipv6">IPv6</option>
+                          </>
+                        )}
+                        {(currentSchemaData.enumType === "number" || currentSchemaData.enumType === "integer") && (
+                          <>
+                            <option value="int32">int32</option>
+                            <option value="int64">int64</option>
+                            <option value="float">Float</option>
+                            <option value="double">Double</option>
+                          </>
+                        )}
+                      </select>
+                    </div>
+                  </div>
+                  
                   {/* Added Enum Values List (Read-only) */}
                   {currentSchemaData.enum.length > 0 && (
                     <div className="added-enum-values">
@@ -1302,32 +1363,18 @@ const SchemaEditDialog = ({
                       {editingEnumIndex !== null ? 'Edit Enum Value:' : 'Add New Enum Value:'}
                     </h5>
                     
-                    <div style={{ display: 'flex', gap: '15px', marginBottom: '12px' }}>
-                      <div className="form-field" style={{ flex: 1 }}>
-                        <label className="form-label">Value <span className="required">*</span></label>
-                        <input 
-                          className="form-input" 
-                          type="text" 
-                          value={currentEnumValue.value} 
-                          onChange={(e) => setCurrentEnumValue({...currentEnumValue, value: e.target.value})}
-                          placeholder="Enter enum value"
-                        />
-                        {validationErrors.enumValue && (
-                          <div className="form-error">{validationErrors.enumValue}</div>
-                        )}
-                      </div>
-                      
-                      <div className="form-field" style={{ flex: 1 }}>
-                        <label className="form-label">Type</label>
-                        <select 
-                          className="form-input" 
-                          value={currentEnumValue.type} 
-                          onChange={(e) => setCurrentEnumValue({...currentEnumValue, type: e.target.value})}
-                        >
-                          <option value="string">String</option>
-                          <option value="number">Number</option>
-                        </select>
-                      </div>
+                    <div className="form-field" style={{ marginBottom: '12px' }}>
+                      <label className="form-label">Value <span className="required">*</span></label>
+                      <input 
+                        className="form-input" 
+                        type="text" 
+                        value={currentEnumValue.value} 
+                        onChange={(e) => setCurrentEnumValue({...currentEnumValue, value: e.target.value})}
+                        placeholder="Enter enum value"
+                      />
+                      {validationErrors.enumValue && (
+                        <div className="form-error">{validationErrors.enumValue}</div>
+                      )}
                     </div>
                     
                     <div style={{ display: 'flex', gap: '10px' }}>
