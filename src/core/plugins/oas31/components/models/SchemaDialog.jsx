@@ -56,7 +56,9 @@ const SchemaDialog = ({
     deprecated: false,
     nullable: false,
     compositionType: "anyOf",
-    compositionSchemas: []
+    compositionSchemas: [],
+    enumType: "string",
+    enumFormat: ""
   })
   const [validationErrors, setValidationErrors] = useState({})
   const [currentProperty, setCurrentProperty] = useState({
@@ -71,8 +73,7 @@ const SchemaDialog = ({
     compositionSchemas: []
   })
   const [currentEnumValue, setCurrentEnumValue] = useState({
-    value: "",
-    type: "string"
+    value: ""
   })
   
   // Search filters for schema dropdowns
@@ -185,7 +186,9 @@ const SchemaDialog = ({
       deprecated: rawSchema.deprecated || false,
       nullable: rawSchema.nullable || false,
       compositionType: "anyOf",
-      compositionSchemas: []
+      compositionSchemas: [],
+      enumType: "string",
+      enumFormat: ""
     }
     
     // Handle composition schemas
@@ -289,6 +292,15 @@ const SchemaDialog = ({
       }
     }
     
+    // Handle enum schemas - detect by presence of enum array
+    if (rawSchema.enum && Array.isArray(rawSchema.enum) && rawSchema.enum.length > 0) {
+      // Set type to enum for UI purposes
+      parsed.type = "enum"
+      // Extract the actual type and format from the schema
+      parsed.enumType = rawSchema.type || "string"
+      parsed.enumFormat = rawSchema.format || ""
+    }
+    
       return parsed
     } catch (error) {
       console.error('Error parsing schema:', error)
@@ -330,7 +342,9 @@ const SchemaDialog = ({
         deprecated: false,
         nullable: false,
         compositionType: "anyOf",
-        compositionSchemas: []
+        compositionSchemas: [],
+        enumType: "string",
+        enumFormat: ""
       }
     }
   }, [])
@@ -460,7 +474,9 @@ const SchemaDialog = ({
       deprecated: false,
       nullable: false,
       compositionType: "anyOf",
-      compositionSchemas: []
+      compositionSchemas: [],
+      enumType: "string",
+      enumFormat: ""
     })
     setValidationErrors({})
     setCurrentProperty({
@@ -475,8 +491,7 @@ const SchemaDialog = ({
       compositionSchemas: []
     })
     setCurrentEnumValue({
-      value: "",
-      type: "string"
+      value: ""
     })
     setPropertyTypeSearch("")
     setItemsTypeSearch("")
@@ -620,7 +635,7 @@ const SchemaDialog = ({
     
     // Check for duplicate enum values
     const existingValue = schemaData.enum.find(enumItem => {
-      const currentValue = currentEnumValue.type === "number" ? parseFloat(currentEnumValue.value) : currentEnumValue.value.trim()
+      const currentValue = (schemaData.enumType === "number" || schemaData.enumType === "integer") ? parseFloat(currentEnumValue.value) : currentEnumValue.value.trim()
       return enumItem === currentValue
     })
     if (existingValue) {
@@ -632,7 +647,7 @@ const SchemaDialog = ({
     setValidationErrors(prev => ({ ...prev, enumValue: undefined }))
     
     // Add enum value to schema data
-    const newValue = currentEnumValue.type === "number" ? parseFloat(currentEnumValue.value) : currentEnumValue.value.trim()
+    const newValue = (schemaData.enumType === "number" || schemaData.enumType === "integer") ? parseFloat(currentEnumValue.value) : currentEnumValue.value.trim()
     
     setSchemaData({
       ...schemaData,
@@ -641,8 +656,7 @@ const SchemaDialog = ({
     
     // Reset form
     setCurrentEnumValue({
-      value: "",
-      type: "string"
+      value: ""
     })
   }, [currentEnumValue, schemaData])
 
@@ -1172,6 +1186,54 @@ const SchemaDialog = ({
                 <div className="form-section">
                   <h4>Enum Values</h4>
                   
+                  {/* Enum Type and Format Selection */}
+                  <div style={{ display: 'flex', gap: '15px', marginBottom: '20px' }}>
+                    <div className="form-field" style={{ flex: 1 }}>
+                      <label className="form-label">Enum Type <span className="required">*</span></label>
+                      <select 
+                        className="form-input" 
+                        value={schemaData.enumType} 
+                        onChange={(e) => setSchemaData({...schemaData, enumType: e.target.value, enumFormat: ""})}
+                      >
+                        <option value="string">String</option>
+                        <option value="number">Number</option>
+                        <option value="integer">Integer</option>
+                      </select>
+                    </div>
+                    
+                    <div className="form-field" style={{ flex: 1 }}>
+                      <label className="form-label">Format</label>
+                      <select 
+                        className="form-input" 
+                        value={schemaData.enumFormat} 
+                        onChange={(e) => setSchemaData({...schemaData, enumFormat: e.target.value})}
+                      >
+                        <option value="">None</option>
+                        {schemaData.enumType === "string" && (
+                          <>
+                            <option value="date">Date</option>
+                            <option value="date-time">Date-Time</option>
+                            <option value="email">Email</option>
+                            <option value="uri">URI</option>
+                            <option value="uuid">UUID</option>
+                            <option value="password">Password</option>
+                            <option value="hostname">Hostname</option>
+                            <option value="ipv4">IPv4</option>
+                            <option value="ipv6">IPv6</option>
+                          </>
+                        )}
+                        {(schemaData.enumType === "number" || schemaData.enumType === "integer") && (
+                          <>
+                            <option value="int32">int32</option>
+                            <option value="int64">int64</option>
+                            <option value="float">Float</option>
+                            <option value="double">Double</option>
+                          </>
+                        )}
+                      </select>
+                    </div>
+                  </div>
+                  
                   {/* Added Enum Values List (Read-only) */}
                   {schemaData.enum.length > 0 && (
                     <div className="added-enum-values">
@@ -1218,32 +1280,18 @@ const SchemaDialog = ({
                   }}>
                     <h5>Add New Enum Value:</h5>
                     
-                    <div style={{ display: 'flex', gap: '15px', marginBottom: '12px' }}>
-                      <div className="form-field" style={{ flex: 1 }}>
-                        <label className="form-label">Value <span className="required">*</span></label>
-                        <input 
-                          className="form-input" 
-                          type="text" 
-                          value={currentEnumValue.value} 
-                          onChange={(e) => setCurrentEnumValue({...currentEnumValue, value: e.target.value})}
-                          placeholder="Enter enum value"
-                        />
-                        {validationErrors.enumValue && (
-                          <div className="form-error">{validationErrors.enumValue}</div>
-                        )}
-                      </div>
-                      
-                      <div className="form-field" style={{ flex: 1 }}>
-                        <label className="form-label">Type</label>
-                        <select 
-                          className="form-input" 
-                          value={currentEnumValue.type} 
-                          onChange={(e) => setCurrentEnumValue({...currentEnumValue, type: e.target.value})}
-                        >
-                          <option value="string">String</option>
-                          <option value="number">Number</option>
-                        </select>
-                      </div>
+                    <div className="form-field" style={{ marginBottom: '12px' }}>
+                      <label className="form-label">Value <span className="required">*</span></label>
+                      <input 
+                        className="form-input" 
+                        type="text" 
+                        value={currentEnumValue.value} 
+                        onChange={(e) => setCurrentEnumValue({...currentEnumValue, value: e.target.value})}
+                        placeholder="Enter enum value"
+                      />
+                      {validationErrors.enumValue && (
+                        <div className="form-error">{validationErrors.enumValue}</div>
+                      )}
                     </div>
                     
                     <button 
