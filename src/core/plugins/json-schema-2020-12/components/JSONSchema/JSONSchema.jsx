@@ -131,8 +131,8 @@ const JSONSchema = forwardRef(
                 "json-schema-2020-12--circular": isCircular,
               })}
             >
-              <div className="json-schema-2020-12-head" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap' }}>
+              <div className="json-schema-2020-12-head">
+                <div className="json-schema-2020-12-head-content">
                   {isExpandable && !isCircular ? (
                     <>
                       <Accordion expanded={isExpanded} onChange={handleExpansion}>
@@ -159,18 +159,12 @@ const JSONSchema = forwardRef(
                     ))}
                 </div>
                 {isExpanded && (
-                  <>
+                  <div className="json-schema-2020-12-head-actions">
                     {onCreateFrom && (
                       <button 
                         className="btn btn-secondary btn-sm" 
                         title="Create Schema from this one"
                         onClick={onCreateFrom}
-                        style={{
-                          fontSize: '12px',
-                          padding: '4px 8px',
-                          flexShrink: 0,
-                          marginRight: '8px'
-                        }}
                       >
                         Create from
                       </button>
@@ -180,17 +174,11 @@ const JSONSchema = forwardRef(
                         className="btn btn-danger btn-sm" 
                         title="Delete Schema"
                         onClick={onDelete}
-                        style={{
-                          fontSize: '12px',
-                          padding: '4px 8px',
-                          flexShrink: 0,
-                          marginRight: '8px'
-                        }}
                       >
                         Delete
                       </button>
                     )}
-                  </>
+                  </div>
                 )}
               </div>
               <div
