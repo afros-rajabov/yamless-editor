@@ -4,6 +4,7 @@
 import React, { useCallback, useState, useRef, useEffect } from "react"
 import PropTypes from "prop-types"
 import SearchableSelect from "./SearchableSelect"
+import PropertyCard from "./PropertyCard"
 
 const refPrefix = "#/components/schemas/"
 
@@ -880,50 +881,16 @@ const SchemaDialog = ({
                     <div className="added-properties">
                       <h5>Added Properties:</h5>
                       {schemaData.properties.map((property, index) => (
-                        <div key={index} className="property-card" style={{
-                          display: 'flex',
-                          justifyContent: 'space-between',
-                          alignItems: 'center',
-                          padding: '10px',
-                          margin: '5px 0',
-                          border: '1px solid #e0e0e0',
-                          borderRadius: '4px',
-                          backgroundColor: '#f9f9f9'
-                        }}>
-                          <div className="property-info">
-                            <strong>{property.name}</strong>
-                            <span style={{ margin: '0 10px', color: '#666' }}>
-                              {property.anyOf || property.oneOf || property.allOf ? (
-                                (() => {
-                                  const compositionType = property.anyOf ? 'anyOf' : property.oneOf ? 'oneOf' : 'allOf'
-                                  const schemas = property[compositionType].map(ref => 
-                                    safeExtractSchemaName(ref.$ref || ref.$$ref)
-                                  ).join(', ')
-                                  return `(${compositionType}: ${schemas}${property.required ? ', required' : ''})`
-                                })()
-                              ) : (
-                                `(${property.type.includes(refPrefix) 
-                                  ? safeExtractSchemaName(property.type) 
-                                  : property.type}${property.format && `, ${property.format}`}${property.required && ', required'})`
-                              )}
-                            </span>
-                            {property.description && (
-                              <span style={{ color: '#666', fontSize: '0.9em' }}>
-                                - {property.description}
-                              </span>
-                            )}
-                          </div>
-                          <button 
-                            type="button" 
-                            className="btn btn-danger btn-sm" 
-                            onClick={() => {
-                              const newProperties = schemaData.properties.filter((_, i) => i !== index)
-                              setSchemaData({...schemaData, properties: newProperties})
-                            }}
-                          >
-                            Remove
-                          </button>
-                        </div>
+                        <PropertyCard
+                          key={index}
+                          property={property}
+                          index={index}
+                          onRemove={(index) => {
+                            const newProperties = schemaData.properties.filter((_, i) => i !== index)
+                            setSchemaData({...schemaData, properties: newProperties})
+                          }}
+                          safeExtractSchemaName={safeExtractSchemaName}
+                        />
                       ))}
                     </div>
                   )}
