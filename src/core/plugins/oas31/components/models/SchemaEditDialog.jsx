@@ -466,6 +466,7 @@ const SchemaEditDialog = ({
                       </h5>
                       <label style={checkboxLabelStyle}>
                         <input 
+                          disabled
                           type="checkbox" 
                           checked={currentProperty.isComposition} 
                           onChange={(e) => setCurrentProperty({
@@ -475,7 +476,7 @@ const SchemaEditDialog = ({
                           })}
                           style={checkboxInputStyle}
                         />
-                        Use Composition
+                        Is Composition
                       </label>
                     </div>
                     
