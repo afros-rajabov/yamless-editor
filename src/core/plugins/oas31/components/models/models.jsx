@@ -5,6 +5,9 @@ import React, { useCallback, useEffect, useState } from "react"
 import PropTypes from "prop-types"
 import classNames from "classnames"
 import SchemaDialog from "./SchemaDialog"
+import SchemaEditDialog from "./SchemaEditDialog"
+
+const refPrefix = "#/components/schemas/"
 
 const Models = ({
   specActions,
@@ -27,6 +30,9 @@ const Models = ({
   const [deleteError, setDeleteError] = useState("")
   const [cloneSourceName, setCloneSourceName] = useState("")
   const [cloneInitialData, setCloneInitialData] = useState(null)
+  const [showEditDialog, setShowEditDialog] = useState(false)
+  const [editSchemaName, setEditSchemaName] = useState("")
+  const [editSchemaData, setEditSchemaData] = useState(null)
   const Collapse = getComponent("Collapse")
   const JSONSchema202012 = getComponent("JSONSchema202012")
   const ArrowUpIcon = getComponent("ArrowUpIcon")
@@ -394,6 +400,173 @@ const Models = ({
     }
   }, [specSelectors, specActions])
 
+  const handleEditSchema = useCallback((schemaName) => {
+    const schema = schemas[schemaName]
+    if (schema) {
+      setEditSchemaName(schemaName)
+      setEditSchemaData(schema)
+      setShowEditDialog(true)
+    }
+  }, [schemas])
+
+  const closeEditDialog = useCallback(() => {
+    setShowEditDialog(false)
+    setEditSchemaName("")
+    setEditSchemaData(null)
+  }, [])
+
+  const handleUpdateSchema = useCallback((schemaData, schemaMode) => {
+    try {
+      const spec = specSelectors.specJson()
+      const js = spec && typeof spec.toJS === "function" ? spec.toJS() : {}
+      const next = { ...js }
+      
+      // Ensure components.schemas exists
+      if (!next.components) {
+        next.components = {}
+      }
+      if (!next.components.schemas) {
+        next.components.schemas = {}
+      }
+      
+      // Build the schema object
+      const schema = {}
+      
+      // Basic fields
+      if (schemaData.description) schema.description = schemaData.description
+      if (schemaData.example) schema.example = schemaData.example
+      
+      // Handle composition types
+      if (schemaMode === "COMPOSITE") {
+        if (schemaData.compositionSchemas.length > 0) {
+          const refs = schemaData.compositionSchemas.map(schemaName => ({
+            $ref: `#/components/schemas/${schemaName}`
+          }))
+          
+          if (schemaData.compositionType === "anyOf") {
+            schema.anyOf = refs
+          } else if (schemaData.compositionType === "oneOf") {
+            schema.oneOf = refs
+          } else if (schemaData.compositionType === "allOf") {
+            schema.allOf = refs
+          }
+        }
+      } else {
+        // Regular schema type
+        schema.type = schemaData.type
+        
+        // Type-specific constraints
+        if (schemaData.type === "string") {
+          if (schemaData.minLength !== null) schema.minLength = schemaData.minLength
+          if (schemaData.maxLength !== null) schema.maxLength = schemaData.maxLength
+          if (schemaData.pattern) schema.pattern = schemaData.pattern
+          if (schemaData.format) schema.format = schemaData.format
+        } else if (schemaData.type === "number" || schemaData.type === "integer") {
+          if (schemaData.minimum !== null) schema.minimum = schemaData.minimum
+          if (schemaData.maximum !== null) schema.maximum = schemaData.maximum
+          if (schemaData.exclusiveMinimum) schema.exclusiveMinimum = schemaData.exclusiveMinimum
+          if (schemaData.exclusiveMaximum) schema.exclusiveMaximum = schemaData.exclusiveMaximum
+          if (schemaData.multipleOf !== null) schema.multipleOf = schemaData.multipleOf
+          if (schemaData.format) schema.format = schemaData.format
+        } else if (schemaData.type === "array") {
+          if (schemaData.minItems !== null) schema.minItems = schemaData.minItems
+          if (schemaData.maxItems !== null) schema.maxItems = schemaData.maxItems
+          if (schemaData.uniqueItems) schema.uniqueItems = schemaData.uniqueItems
+          
+          // Items schema
+          if (schemaData.itemsType) {
+            if (schemaData.itemsType.startsWith("#/components/schemas/")) {
+              schema.items = { $ref: schemaData.itemsType }
+            } else {
+              schema.items = { type: schemaData.itemsType }
+            }
+          }
+        } else if (schemaData.type === "object") {
+          if (schemaData.minProperties !== null) schema.minProperties = schemaData.minProperties
+          if (schemaData.maxProperties !== null) schema.maxProperties = schemaData.maxProperties
+          
+          // Properties
+          if (schemaData.properties && schemaData.properties.length > 0) {
+            schema.properties = {}
+            const requiredProps = []
+            
+            schemaData.properties.forEach(prop => {
+              if (prop.name) {
+                const propSchema = {}
+                
+                // Handle composition properties (anyOf, oneOf, allOf)
+                if (prop.anyOf || prop.oneOf || prop.allOf) {
+                  if (prop.anyOf) propSchema.anyOf = prop.anyOf
+                  if (prop.oneOf) propSchema.oneOf = prop.oneOf
+                  if (prop.allOf) propSchema.allOf = prop.allOf
+                } else if (prop.type && prop.type.startsWith("#/components/schemas/")) {
+                  propSchema.$$ref = prop.type
+                  propSchema.$ref = prop.type
+                } else if (prop.type) {
+                  propSchema.type = prop.type
+                  
+                  // Handle array items
+                  if (prop.type === "array" && prop.itemsType) {
+                    if (prop.itemsType.startsWith("#/components/schemas/")) {
+                      propSchema.items = { $$ref: prop.itemsType, $ref: prop.itemsType }
+                    } else {
+                      propSchema.items = { type: prop.itemsType }
+                    }
+                    propSchema.default = []
+                  }
+                }
+                
+                if (prop.format) propSchema.format = prop.format
+                if (prop.description) propSchema.description = prop.description
+                
+                schema.properties[prop.name] = propSchema
+                
+                if (prop.required) {
+                  requiredProps.push(prop.name)
+                }
+              }
+            })
+            
+            if (requiredProps.length > 0) {
+              schema.required = requiredProps
+            }
+          }
+          
+        } else if (schemaData.type === "enum") {
+          // For enum type, we only need the enum array, no type field
+          // The enum values are already in schemaData.enum
+        }
+      }
+      
+      // Value constraints
+      if (schemaData.enum && schemaData.enum.length > 0) {
+        schema.enum = schemaData.enum
+      }
+      if (schemaData.const !== null) {
+        schema.const = schemaData.const
+      }
+      if (schemaData.default !== null) {
+        schema.default = schemaData.default
+      }
+      
+      // Advanced features
+      if (schemaData.readOnly) schema.readOnly = true
+      if (schemaData.writeOnly) schema.writeOnly = true
+      if (schemaData.deprecated) schema.deprecated = true
+      if (schemaData.nullable) schema.nullable = true
+      
+      // Update existing schema in spec
+      next.components.schemas[editSchemaName] = schema
+      
+      const asString = JSON.stringify(next, null, 2)
+      specActions.updateSpec(asString)
+      
+      // Close edit dialog
+      closeEditDialog()
+    } catch (e) {
+      console.error("Error updating schema:", e)
+    }
+  }, [editSchemaName, specSelectors, specActions, closeEditDialog])
 
   const handleJSONSchema202012Ref = (schemaName) => (node) => {
     if (node !== null) {
@@ -454,6 +627,7 @@ const Models = ({
                 onExpand={handleJSONSchema202012Expand(schemaName)}
                 onDelete={() => handleDeleteSchema(schemaName)}
                 onCreateFrom={() => handleCreateFrom(schemaName)}
+                onEdit={() => handleEditSchema(schemaName)}
               />
             )
           })}
@@ -526,6 +700,15 @@ const Models = ({
           </div>
         </div>
       )}
+      <SchemaEditDialog
+        showDialog={showEditDialog}
+        onClose={closeEditDialog}
+        onUpdateSchema={handleUpdateSchema}
+        schemas={schemas}
+        getComponent={getComponent}
+        schemaName={editSchemaName}
+        schemaData={editSchemaData}
+      />
     </>
   )
 }

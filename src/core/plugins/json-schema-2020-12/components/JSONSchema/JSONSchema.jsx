@@ -31,6 +31,7 @@ const JSONSchema = forwardRef(
       onExpand = () => {},
       onDelete,
       onCreateFrom,
+      onEdit,
       identifier = "",
     },
     ref
@@ -169,6 +170,15 @@ const JSONSchema = forwardRef(
                         Create from
                       </button>
                     )}
+                    {onEdit && (
+                      <button 
+                        className="btn btn-secondary btn-sm" 
+                        title="Edit Schema"
+                        onClick={onEdit}
+                      >
+                        Edit
+                      </button>
+                    )}
                     {onDelete && (
                       <button 
                         className="btn btn-danger btn-sm" 
@@ -249,6 +259,7 @@ JSONSchema.propTypes = {
   onExpand: PropTypes.func,
   onDelete: PropTypes.func,
   onCreateFrom: PropTypes.func,
+  onEdit: PropTypes.func,
   identifier: PropTypes.string,
 }
 
