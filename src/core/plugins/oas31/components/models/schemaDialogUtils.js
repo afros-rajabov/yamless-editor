@@ -185,33 +185,20 @@ export const parseSchemaToDialogFormat = (rawSchema) => {
       }
       
       // Check if property is a composition
-      // TODO: HEREERERE
       if (propSchema.anyOf || propSchema.oneOf || propSchema.allOf) {
         property.isComposition = true
-        if (propSchema.anyOf && Array.isArray(propSchema.anyOf)) {
-          property.compositionType = "anyOf"
-          property.anyOf = propSchema.anyOf
-          property.compositionSchemas = propSchema.anyOf
+        const compositionType = propSchema.anyOf ? 'anyOf' : propSchema.oneOf ? 'oneOf' : 'allOf'
+        const compositionSchemas = propSchema[compositionType]
+        
+        if (Array.isArray(compositionSchemas)) {
+          property.compositionType = compositionType
+          property[compositionType] = compositionSchemas
+          property.compositionSchemas = compositionSchemas
             .filter(item => item && (item.$ref || item.$$ref) && typeof (item.$ref || item.$$ref) === 'string')
             .map(item => {
               const ref = item.$ref || item.$$ref
-              const extracted = safeExtractSchemaName(ref)
-              return extracted
+              return safeExtractSchemaName(ref)
             })
-            .filter(schemaName => schemaName) // Remove empty strings from invalid references
-        } else if (propSchema.oneOf && Array.isArray(propSchema.oneOf)) {
-          property.compositionType = "oneOf"
-          property.oneOf = propSchema.oneOf
-          property.compositionSchemas = propSchema.oneOf
-            .filter(item => item && (item.$ref || item.$$ref) && typeof (item.$ref || item.$$ref) === 'string')
-            .map(item => safeExtractSchemaName(item.$ref || item.$$ref))
-            .filter(schemaName => schemaName) // Remove empty strings from invalid references
-        } else if (propSchema.allOf && Array.isArray(propSchema.allOf)) {
-          property.compositionType = "allOf"
-          property.allOf = propSchema.allOf
-          property.compositionSchemas = propSchema.allOf
-            .filter(item => item && (item.$ref || item.$$ref) && typeof (item.$ref || item.$$ref) === 'string')
-            .map(item => safeExtractSchemaName(item.$ref || item.$$ref))
             .filter(schemaName => schemaName) // Remove empty strings from invalid references
         }
       } else {
