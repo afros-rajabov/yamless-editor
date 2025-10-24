@@ -368,8 +368,11 @@ const Models = ({
           }
           
         } else if (schemaData.type === "enum") {
-          // For enum type, we only need the enum array, no type field
-          // The enum values are already in schemaData.enum
+          // For enum type, set the proper type and format
+          schema.type = schemaData.enumType
+          if (schemaData.enumFormat) {
+            schema.format = schemaData.enumFormat
+          }
         }
       }
       
@@ -533,8 +536,11 @@ const Models = ({
           }
           
         } else if (schemaData.type === "enum") {
-          // For enum type, we only need the enum array, no type field
-          // The enum values are already in schemaData.enum
+          // For enum type, set the proper type and format
+          schema.type = schemaData.enumType
+          if (schemaData.enumFormat) {
+            schema.format = schemaData.enumFormat
+          }
         }
       }
       
