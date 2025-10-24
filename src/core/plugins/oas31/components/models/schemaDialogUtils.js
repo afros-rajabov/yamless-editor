@@ -22,6 +22,37 @@ export const primitiveTypeOptions = [
 export const emptyPrimitiveOptions = []
 
 /**
+ * Extract composition schema names from an array of composition items
+ * Handles schema references, primitive type objects, and direct primitive strings
+ * @param {Array} compositionItems - Array of composition schema items
+ * @returns {Array} - Array of extracted schema names and primitive types
+ */
+export const extractCompositionSchemas = (compositionItems) => {
+  if (!Array.isArray(compositionItems)) {
+    return []
+  }
+  
+  return compositionItems
+    .map(item => {
+      // Handle schema references
+      if (item && (item.$ref || item.$$ref) && typeof (item.$ref || item.$$ref) === 'string') {
+        const ref = item.$ref || item.$$ref
+        return safeExtractSchemaName(ref)
+      }
+      // Handle primitive types
+      else if (item && typeof item === 'object' && item.type && typeof item.type === 'string') {
+        return item.type
+      }
+      // Handle direct primitive type strings
+      else if (typeof item === 'string' && primitiveTypeOptions.some(option => option.value === item)) {
+        return item
+      }
+      return null
+    })
+    .filter(schemaName => schemaName) // Remove null values and empty strings
+}
+
+/**
  * Safe helper function to extract schema name from reference
  * @param {string} ref - The reference string
  * @returns {string} - The extracted schema name
@@ -152,24 +183,15 @@ export const parseSchemaToDialogFormat = (rawSchema) => {
     if (rawSchema.anyOf && Array.isArray(rawSchema.anyOf)) {
       parsed.compositionType = "anyOf"
       parsed.anyOf = rawSchema.anyOf
-      parsed.compositionSchemas = rawSchema.anyOf
-        .filter(item => item && (item.$ref || item.$$ref) && typeof (item.$ref || item.$$ref) === 'string')
-        .map(item => safeExtractSchemaName(item.$ref || item.$$ref))
-        .filter(schemaName => schemaName) // Remove empty strings from invalid references
+      parsed.compositionSchemas = extractCompositionSchemas(rawSchema.anyOf)
     } else if (rawSchema.oneOf && Array.isArray(rawSchema.oneOf)) {
       parsed.compositionType = "oneOf"
       parsed.oneOf = rawSchema.oneOf
-      parsed.compositionSchemas = rawSchema.oneOf
-        .filter(item => item && (item.$ref || item.$$ref) && typeof (item.$ref || item.$$ref) === 'string')
-        .map(item => safeExtractSchemaName(item.$ref || item.$$ref))
-        .filter(schemaName => schemaName) // Remove empty strings from invalid references
+      parsed.compositionSchemas = extractCompositionSchemas(rawSchema.oneOf)
     } else if (rawSchema.allOf && Array.isArray(rawSchema.allOf)) {
       parsed.compositionType = "allOf"
       parsed.allOf = rawSchema.allOf
-      parsed.compositionSchemas = rawSchema.allOf
-        .filter(item => item && (item.$ref || item.$$ref) && typeof (item.$ref || item.$$ref) === 'string')
-        .map(item => safeExtractSchemaName(item.$ref || item.$$ref))
-        .filter(schemaName => schemaName) // Remove empty strings from invalid references
+      parsed.compositionSchemas = extractCompositionSchemas(rawSchema.allOf)
     }
   }
   
@@ -193,13 +215,7 @@ export const parseSchemaToDialogFormat = (rawSchema) => {
         if (Array.isArray(compositionSchemas)) {
           property.compositionType = compositionType
           property[compositionType] = compositionSchemas
-          property.compositionSchemas = compositionSchemas
-            .filter(item => item && (item.$ref || item.$$ref) && typeof (item.$ref || item.$$ref) === 'string')
-            .map(item => {
-              const ref = item.$ref || item.$$ref
-              return safeExtractSchemaName(ref)
-            })
-            .filter(schemaName => schemaName) // Remove empty strings from invalid references
+          property.compositionSchemas = extractCompositionSchemas(compositionSchemas)
         }
       } else {
         const ref = propSchema.$ref || propSchema.$$ref
