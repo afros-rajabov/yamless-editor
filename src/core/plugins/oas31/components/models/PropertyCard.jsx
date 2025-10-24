@@ -10,15 +10,18 @@ const PropertyCard = ({
   property, 
   index, 
   onRemove, 
+  onEdit,
   safeExtractSchemaName 
 }) => {
   const renderPropertyInfo = () => {
     if (property.anyOf || property.oneOf || property.allOf) {
       const compositionType = property.anyOf ? 'anyOf' : property.oneOf ? 'oneOf' : 'allOf'
-      const schemas = property[compositionType].map(ref => 
-        safeExtractSchemaName(ref.$ref || ref.$$ref)
+      const schemas = property[compositionType].map(cType => {
+        const refValue = cType.$ref || cType.$$ref
+        return refValue ? safeExtractSchemaName(refValue): cType.type
+      }
       ).join(', ')
-      return `(${compositionType}: ${schemas}${property.required ? ', required' : ''})`
+      return `(${compositionType}[${schemas}] ${property.required ? ', required' : ''})`
     } else {
       let typeDisplay = property.type.includes(refPrefix) 
         ? safeExtractSchemaName(property.type) 
@@ -58,13 +61,24 @@ const PropertyCard = ({
           </span>
         )}
       </div>
-      <button 
-        type="button" 
-        className="btn btn-danger btn-sm" 
-        onClick={() => onRemove(index)}
-      >
-        Remove
-      </button>
+      <div className="property-actions" style={{ display: 'flex', gap: '8px' }}>
+        {onEdit && (
+          <button 
+            type="button" 
+            className="btn btn-secondary btn-sm" 
+            onClick={() => onEdit(index)}
+          >
+            Edit
+          </button>
+        )}
+        <button 
+          type="button" 
+          className="btn btn-danger btn-sm" 
+          onClick={() => onRemove(index)}
+        >
+          Remove
+        </button>
+      </div>
     </div>
   )
 }
@@ -73,6 +87,7 @@ PropertyCard.propTypes = {
   property: PropTypes.object.isRequired,
   index: PropTypes.number.isRequired,
   onRemove: PropTypes.func.isRequired,
+  onEdit: PropTypes.func,
   safeExtractSchemaName: PropTypes.func.isRequired
 }
 
