@@ -137,11 +137,11 @@ export default class BaseLayout extends React.Component {
 
           <FilterContainer />
 
-          {/* <Row>
+          <Row>
             <Col mobile={12} desktop={12}>
               <Operations />
             </Col>
-          </Row> */}
+          </Row>
 
           {isOAS31 && (
             <Row className="webhooks-container">

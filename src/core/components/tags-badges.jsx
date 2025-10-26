@@ -1,5 +1,8 @@
 import React from "react"
 import PropTypes from "prop-types"
+import TagContextMenu from "./tag-context-menu"
+import TagEditDialog from "./tag-edit-dialog"
+import TagDeleteDialog from "./tag-delete-dialog"
 
 export default class TagsBadges extends React.Component {
 
@@ -14,7 +17,14 @@ export default class TagsBadges extends React.Component {
 
   constructor(props) {
     super(props)
-    this.state = { showDialog: false, newTagName: "", newTagDescription: "" }
+    this.state = { 
+      showDialog: false, 
+      newTagName: "", 
+      newTagDescription: "",
+      contextMenu: { isOpen: false, position: { x: 0, y: 0 }, tagName: "" },
+      editingTag: null,
+      deletingTag: null
+    }
   }
 
   render() {
@@ -78,6 +88,150 @@ export default class TagsBadges extends React.Component {
       }
     }
 
+    // Context menu handlers
+    const onContextMenu = (e, tagName) => {
+      e.preventDefault()
+      e.stopPropagation()
+      this.setState({
+        contextMenu: {
+          isOpen: true,
+          position: { x: e.clientX, y: e.clientY },
+          tagName
+        }
+      })
+    }
+
+    const closeContextMenu = () => {
+      this.setState({
+        contextMenu: { isOpen: false, position: { x: 0, y: 0 }, tagName: "" }
+      })
+    }
+
+    // Edit handlers
+    const onEditTag = () => {
+      const tagName = this.state.contextMenu.tagName
+      const tag = tags.find(t => t.get("name") === tagName)
+      if (tag) {
+        this.setState({
+          editingTag: {
+            name: tag.get("name"),
+            description: tag.get("description") || ""
+          }
+        })
+      }
+    }
+
+    const onSaveEdit = (updatedTag) => {
+      try {
+        const spec = specSelectors.specJson()
+        const js = spec && typeof spec.toJS === "function" ? spec.toJS() : {}
+        const next = { ...js }
+        
+        // Update tag in tags array
+        const tagIndex = next.tags.findIndex(t => t.name === this.state.editingTag.name)
+        if (tagIndex !== -1) {
+          next.tags[tagIndex] = updatedTag
+        }
+
+        // If name changed, update all operation references
+        if (updatedTag.name !== this.state.editingTag.name) {
+          updateOperationTagReferences(next, this.state.editingTag.name, updatedTag.name)
+        }
+
+        const asString = JSON.stringify(next, null, 2)
+        specActions.updateSpec(asString)
+        this.setState({ editingTag: null })
+      } catch (e) {
+        // no-op
+      }
+    }
+
+    const onCancelEdit = () => {
+      this.setState({ editingTag: null })
+    }
+
+    // Delete handlers
+    const onDeleteTag = () => {
+      const tagName = this.state.contextMenu.tagName
+      const operationCount = countOperationsForTag(tagName)
+      this.setState({
+        deletingTag: { name: tagName, operationCount }
+      })
+    }
+
+    const onConfirmDelete = () => {
+      const { name: tagName } = this.state.deletingTag
+      try {
+        const spec = specSelectors.specJson()
+        const js = spec && typeof spec.toJS === "function" ? spec.toJS() : {}
+        const next = { ...js }
+        
+        // Remove tag from tags array
+        next.tags = next.tags.filter(t => t.name !== tagName)
+        
+        // Remove tag references from all operations
+        removeTagFromOperations(next, tagName)
+
+        const asString = JSON.stringify(next, null, 2)
+        specActions.updateSpec(asString)
+        this.setState({ deletingTag: null })
+      } catch (e) {
+        // no-op
+      }
+    }
+
+    const onCancelDelete = () => {
+      this.setState({ deletingTag: null })
+    }
+
+    // Helper functions
+    const countOperationsForTag = (tagName) => {
+      try {
+        const spec = specSelectors.specJson()
+        const js = spec && typeof spec.toJS === "function" ? spec.toJS() : {}
+        let count = 0
+        
+        if (js.paths) {
+          Object.values(js.paths).forEach(path => {
+            Object.values(path).forEach(operation => {
+              if (operation.tags && operation.tags.includes(tagName)) {
+                count++
+              }
+            })
+          })
+        }
+        
+        return count
+      } catch (e) {
+        return 0
+      }
+    }
+
+    const updateOperationTagReferences = (spec, oldTagName, newTagName) => {
+      if (spec.paths) {
+        Object.values(spec.paths).forEach(path => {
+          Object.values(path).forEach(operation => {
+            if (operation.tags && operation.tags.includes(oldTagName)) {
+              const index = operation.tags.indexOf(oldTagName)
+              operation.tags[index] = newTagName
+            }
+          })
+        })
+      }
+    }
+
+    const removeTagFromOperations = (spec, tagName) => {
+      if (spec.paths) {
+        Object.values(spec.paths).forEach(path => {
+          Object.values(path).forEach(operation => {
+            if (operation.tags && operation.tags.includes(tagName)) {
+              operation.tags = operation.tags.filter(tag => tag !== tagName)
+            }
+          })
+        })
+      }
+    }
+
     return (
       <>
       <section className={isSectionOpen ? "opblock-tag-section tags-section is-open" : "opblock-tag-section tags-section"}>
@@ -108,7 +262,15 @@ export default class TagsBadges extends React.Component {
                   if(!name) return null
                   const anchor = `#operations-tag-${anchorName}`
                   return (
-                    <a key={name + idx} className="tag-badge tag-badge--link" href={anchor} onClick={() => onBadgeClick(name)}>{name}</a>
+                    <a 
+                      key={name + idx} 
+                      className="tag-badge tag-badge--link" 
+                      href={anchor} 
+                      onClick={() => onBadgeClick(name)}
+                      onContextMenu={(e) => onContextMenu(e, name)}
+                    >
+                      {name}
+                    </a>
                   )
                 }).toArray()}
               </div>
@@ -148,6 +310,35 @@ export default class TagsBadges extends React.Component {
             </div>
           </div>
         ) : null}
+        
+        {/* Context Menu */}
+        <TagContextMenu
+          isOpen={this.state.contextMenu.isOpen}
+          position={this.state.contextMenu.position}
+          onEdit={onEditTag}
+          onDelete={onDeleteTag}
+          onClose={closeContextMenu}
+        />
+        
+        {/* Edit Dialog */}
+        <TagEditDialog
+          isOpen={!!this.state.editingTag}
+          tag={this.state.editingTag}
+          allTags={tags}
+          onSave={onSaveEdit}
+          onClose={onCancelEdit}
+          getComponent={getComponent}
+        />
+        
+        {/* Delete Dialog */}
+        <TagDeleteDialog
+          isOpen={!!this.state.deletingTag}
+          tagName={this.state.deletingTag?.name || ""}
+          operationCount={this.state.deletingTag?.operationCount || 0}
+          onConfirm={onConfirmDelete}
+          onCancel={onCancelDelete}
+          getComponent={getComponent}
+        />
       </>
     )
   }
