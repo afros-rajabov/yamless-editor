@@ -29,6 +29,9 @@ export const UPDATE_OPERATION_META_VALUE = "spec_update_operation_meta_value"
 export const UPDATE_OPERATION_METHOD = "spec_update_operation_method"
 export const UPDATE_OPERATION_PATH = "spec_update_operation_path"
 export const UPDATE_OPERATION_FIELDS = "spec_update_operation_fields"
+export const ADD_PARAMETER = "spec_add_parameter"
+export const UPDATE_PARAMETER = "spec_update_parameter"
+export const DELETE_PARAMETER = "spec_delete_parameter"
 export const UPDATE_RESOLVED = "spec_update_resolved"
 export const UPDATE_RESOLVED_SUBTREE = "spec_update_resolved_subtree"
 export const SET_SCHEME = "set_scheme"
@@ -558,5 +561,26 @@ export function setScheme (scheme, path, method) {
   return {
     type: SET_SCHEME,
     payload: { scheme, path, method }
+  }
+}
+
+export function addParameter(path, method, parameter) {
+  return {
+    type: ADD_PARAMETER,
+    payload: { path, method, parameter }
+  }
+}
+
+export function updateParameter(path, method, oldParameterIdentifier, newParameter) {
+  return {
+    type: UPDATE_PARAMETER,
+    payload: { path, method, oldParameterIdentifier, newParameter }
+  }
+}
+
+export function deleteParameter(path, method, parameterIdentifier) {
+  return {
+    type: DELETE_PARAMETER,
+    payload: { path, method, parameterIdentifier }
   }
 }

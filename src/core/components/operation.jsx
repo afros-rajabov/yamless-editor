@@ -232,6 +232,7 @@ export default class Operation extends PureComponent {
                   onCancelClick = { onCancelClick }
                   tryItOutEnabled = { tryItOutEnabled }
                   allowTryItOut={allowTryItOut}
+                  isEditing={isEditing}
 
                   fn={fn}
                   getComponent={ getComponent }

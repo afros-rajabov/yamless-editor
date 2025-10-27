@@ -28,8 +28,41 @@ import {
   UPDATE_OPERATION_METHOD,
   UPDATE_OPERATION_PATH,
   UPDATE_OPERATION_FIELDS,
+  ADD_PARAMETER,
+  UPDATE_PARAMETER,
+  DELETE_PARAMETER,
   SET_SCHEME
 } from "./actions"
+
+/**
+ * Resolve parameter schema references to actual schema definitions
+ * @param {Object} parameter - The parameter object
+ * @param {Object} state - The current state
+ * @returns {Object} Parameter with resolved schema if applicable
+ */
+const resolveParameterSchema = (parameter, state) => {
+  // Check if parameter has a schema with $ref
+  const schemaRef = parameter.schema?.$ref
+  if (!schemaRef) {
+    return parameter // No $ref to resolve
+  }
+  
+  // Extract schema name from ref (e.g., "#/components/schemas/ModelStatusEnum" -> "ModelStatusEnum")
+  const schemaName = schemaRef.split('/').pop()
+  
+  // Look up the schema definition from components/schemas
+  const schemaDefinition = state.getIn(["json", "components", "schemas", schemaName])
+  
+  if (schemaDefinition) {
+    // Return parameter with resolved schema (merged with original to preserve $ref for documentation)
+    return {
+      ...parameter,
+      schema: schemaDefinition.toJS()
+    }
+  }
+  
+  return parameter // Couldn't resolve, return as-is
+}
 
 export default {
 
@@ -312,6 +345,147 @@ export default {
       if (currentResolvedSubtree) {
         newState = newState.setIn(["resolvedSubtrees", "paths", path, method, "description"], updates.description)
       }
+    }
+
+    // Update the spec string to reflect the changes
+    const updatedSpec = newState.get("json").toJS()
+    const specString = JSON.stringify(updatedSpec, null, 2)
+    newState = newState.set("spec", specString)
+
+    return newState
+  },
+
+  [ADD_PARAMETER]: (state, { payload: { path, method, parameter } }) => {
+    // Get the operation data from the current location
+    const operationData = state.getIn(["json", "paths", path, method])
+    
+    if (!operationData) {
+      return state // Operation doesn't exist, do nothing
+    }
+
+    let newState = state
+
+    // Get existing parameters array or create new one
+    const existingParameters = operationData.get("parameters", List())
+    const newParameters = existingParameters.push(fromJS(parameter))
+
+    // Update the operation with new parameter
+    newState = newState.setIn(["json", "paths", path, method, "parameters"], newParameters)
+    
+    // Also update resolved data if it exists
+    const resolvedData = state.getIn(["resolved", "paths", path, method])
+    if (resolvedData) {
+      const resolvedParameters = resolvedData.get("parameters", List())
+      const newResolvedParameters = resolvedParameters.push(fromJS(parameter))
+      newState = newState.setIn(["resolved", "paths", path, method, "parameters"], newResolvedParameters)
+    }
+
+    // Update the resolvedSubtrees cache
+    const currentResolvedSubtree = newState.getIn(["resolvedSubtrees", "paths", path, method])
+    if (currentResolvedSubtree) {
+      const resolvedParameter = resolveParameterSchema(parameter, state)
+      const subtreeParameters = currentResolvedSubtree.get("parameters", List())
+      const newSubtreeParameters = subtreeParameters.push(fromJS(resolvedParameter))
+      newState = newState.setIn(["resolvedSubtrees", "paths", path, method, "parameters"], newSubtreeParameters)
+    }
+
+    // Update the spec string to reflect the changes
+    const updatedSpec = newState.get("json").toJS()
+    const specString = JSON.stringify(updatedSpec, null, 2)
+    newState = newState.set("spec", specString)
+
+    return newState
+  },
+
+  [UPDATE_PARAMETER]: (state, { payload: { path, method, oldParameterIdentifier, newParameter } }) => {
+    // Get the operation data from the current location
+    const operationData = state.getIn(["json", "paths", path, method])
+    
+    if (!operationData) {
+      return state // Operation doesn't exist, do nothing
+    }
+
+    let newState = state
+    const existingParameters = operationData.get("parameters", List())
+    
+    // Find the parameter to update by name and in
+    const parameterIndex = existingParameters.findIndex(param => 
+      param.get("name") === oldParameterIdentifier.name && 
+      param.get("in") === oldParameterIdentifier.in
+    )
+
+    if (parameterIndex === -1) {
+      return state // Parameter not found, do nothing
+    }
+
+    // Update the parameter
+    const newParameters = existingParameters.set(parameterIndex, fromJS(newParameter))
+    newState = newState.setIn(["json", "paths", path, method, "parameters"], newParameters)
+    
+    // Also update resolved data if it exists
+    const resolvedData = state.getIn(["resolved", "paths", path, method])
+    if (resolvedData) {
+      const resolvedParameters = resolvedData.get("parameters", List())
+      const newResolvedParameters = resolvedParameters.set(parameterIndex, fromJS(newParameter))
+      newState = newState.setIn(["resolved", "paths", path, method, "parameters"], newResolvedParameters)
+    }
+
+    // Update the resolvedSubtrees cache
+    const currentResolvedSubtree = newState.getIn(["resolvedSubtrees", "paths", path, method])
+    if (currentResolvedSubtree) {
+      const resolvedParameter = resolveParameterSchema(newParameter, state)
+      const subtreeParameters = currentResolvedSubtree.get("parameters", List())
+      const newSubtreeParameters = subtreeParameters.set(parameterIndex, fromJS(resolvedParameter))
+      newState = newState.setIn(["resolvedSubtrees", "paths", path, method, "parameters"], newSubtreeParameters)
+    }
+
+    // Update the spec string to reflect the changes
+    const updatedSpec = newState.get("json").toJS()
+    const specString = JSON.stringify(updatedSpec, null, 2)
+    newState = newState.set("spec", specString)
+
+    return newState
+  },
+
+  [DELETE_PARAMETER]: (state, { payload: { path, method, parameterIdentifier } }) => {
+    // Get the operation data from the current location
+    const operationData = state.getIn(["json", "paths", path, method])
+    
+    if (!operationData) {
+      return state // Operation doesn't exist, do nothing
+    }
+
+    let newState = state
+    const existingParameters = operationData.get("parameters", List())
+    
+    // Find the parameter to delete by name and in
+    const parameterIndex = existingParameters.findIndex(param => 
+      param.get("name") === parameterIdentifier.name && 
+      param.get("in") === parameterIdentifier.in
+    )
+
+    if (parameterIndex === -1) {
+      return state // Parameter not found, do nothing
+    }
+
+    // Remove the parameter
+    const newParameters = existingParameters.delete(parameterIndex)
+    newState = newState.setIn(["json", "paths", path, method, "parameters"], newParameters)
+    
+    // Also update resolved data if it exists
+    const resolvedData = state.getIn(["resolved", "paths", path, method])
+    if (resolvedData) {
+      const resolvedParameters = resolvedData.get("parameters", List())
+      const newResolvedParameters = resolvedParameters.delete(parameterIndex)
+      newState = newState.setIn(["resolved", "paths", path, method, "parameters"], newResolvedParameters)
+    }
+
+    // Update the resolvedSubtrees cache
+    const currentResolvedSubtree = newState.getIn(["resolvedSubtrees", "paths", path, method])
+    if (currentResolvedSubtree) {
+      const subtreeParameters = currentResolvedSubtree.get("parameters", List())
+      const newSubtreeParameters = subtreeParameters.delete(parameterIndex)
+      newState = newState.setIn(["resolvedSubtrees", "paths", path, method, "parameters"], newSubtreeParameters)
     }
 
     // Update the spec string to reflect the changes

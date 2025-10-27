@@ -35,6 +35,7 @@ import { Parameters } from "core/components/parameters"
 import ParameterExt from "core/components/parameter-extension"
 import ParameterIncludeEmpty from "core/components/parameter-include-empty"
 import ParameterRow from "core/components/parameter-row"
+import ParameterEditForm from "core/components/parameter-edit-form"
 import Execute from "core/components/execute"
 import Headers from "core/components/headers"
 import Errors from "core/components/errors"
@@ -98,6 +99,7 @@ const CoreComponentsPlugin = () => ({
     responseBody: ResponseBody,
     parameters: Parameters,
     parameterRow: ParameterRow,
+    parameterEditForm: ParameterEditForm,
     execute: Execute,
     headers: Headers,
     errors: Errors,

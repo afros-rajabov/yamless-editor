@@ -31,8 +31,8 @@ const defaultOptions = Object.freeze({
   defaultModelRendering: "example",
   defaultModelExpandDepth: 1,
   defaultModelsExpandDepth: 1,
-  showExtensions: false,
-  showCommonExtensions: false,
+  showExtensions: true,
+  showCommonExtensions: true,
   withCredentials: false,
   requestSnippetsEnabled: false,
   requestSnippets: {

@@ -22,6 +22,9 @@ export default class ParameterRow extends Component {
     specPath: ImPropTypes.list.isRequired,
     oas3Actions: PropTypes.object.isRequired,
     oas3Selectors: PropTypes.object.isRequired,
+    isEditing: PropTypes.bool,
+    onParameterClick: PropTypes.func,
+    isSelected: PropTypes.bool,
   }
 
   constructor(props, context) {
@@ -208,7 +211,7 @@ export default class ParameterRow extends Component {
   }
 
   render() {
-    let {param, rawParam, getComponent, getConfigs, isExecute, fn, onChangeConsumes, specSelectors, pathMethod, specPath, oas3Selectors} = this.props
+    let {param, rawParam, getComponent, getConfigs, isExecute, fn, onChangeConsumes, specSelectors, pathMethod, specPath, oas3Selectors, isEditing, onParameterClick, isSelected} = this.props
 
     let isOAS3 = specSelectors.isOAS3()
 
@@ -314,8 +317,19 @@ export default class ParameterRow extends Component {
         schema={ schema }
       />
 
+    const handleRowClick = () => {
+      if (isEditing && onParameterClick) {
+        onParameterClick(rawParam)
+      }
+    }
+
     return (
-      <tr data-param-name={param.get("name")} data-param-in={param.get("in")}>
+      <tr 
+        data-param-name={param.get("name")} 
+        data-param-in={param.get("in")}
+        className={`${isEditing ? 'parameter-row-editable' : ''} ${isSelected ? 'parameter-row-selected' : ''}`}
+        onClick={handleRowClick}
+      >
         <td className="parameters-col_name">
           <div className={required ? "parameter__name required" : "parameter__name"}>
             { param.get("name") }

@@ -11,6 +11,7 @@ export default class Parameters extends Component {
     this.state = {
       callbackVisible: false,
       parametersVisible: true,
+      selectedParameter: null,
     }
   }
 
@@ -32,6 +33,7 @@ export default class Parameters extends Component {
     pathMethod: PropTypes.array.isRequired,
     getConfigs: PropTypes.func.isRequired,
     specPath: ImPropTypes.list.isRequired,
+    isEditing: PropTypes.bool,
   }
 
 
@@ -42,6 +44,7 @@ export default class Parameters extends Component {
     allowTryItOut: true,
     onChangeKey: [],
     specPath: [],
+    isEditing: false,
   }
 
   onChange = (param, value, isXml) => {
@@ -92,6 +95,44 @@ export default class Parameters extends Component {
     }
   }
 
+  handleParameterClick = (parameter) => {
+    this.setState({ selectedParameter: parameter })
+  }
+
+  handleParameterSave = (parameter, oldIdentifier) => {
+    const { specActions, pathMethod } = this.props
+    const [path, method] = pathMethod
+
+    if (oldIdentifier) {
+      // Update existing parameter
+      specActions.updateParameter(path, method, oldIdentifier, parameter)
+    } else {
+      // Add new parameter
+      specActions.addParameter(path, method, parameter)
+    }
+
+    this.setState({ selectedParameter: null })
+  }
+
+  handleParameterDelete = (identifier) => {
+    const { specActions, pathMethod } = this.props
+    const [path, method] = pathMethod
+
+    specActions.deleteParameter(path, method, identifier)
+    this.setState({ selectedParameter: null })
+  }
+
+  handleParameterClear = () => {
+    this.setState({ selectedParameter: null })
+  }
+
+  componentDidUpdate(prevProps) {
+    // Clear selected parameter when edit mode is turned off
+    if (prevProps.isEditing && !this.props.isEditing) {
+      this.setState({ selectedParameter: null })
+    }
+  }
+
   render() {
 
     let {
@@ -110,9 +151,11 @@ export default class Parameters extends Component {
       oas3Actions,
       oas3Selectors,
       operation,
+      isEditing,
     } = this.props
 
     const ParameterRow = getComponent("parameterRow")
+    const ParameterEditForm = getComponent("parameterEditForm")
     const TryItOutButton = getComponent("TryItOutButton")
     const ContentType = getComponent("contentType")
     const Callbacks = getComponent("Callbacks", true)
@@ -199,7 +242,12 @@ export default class Parameters extends Component {
                       oas3Actions={oas3Actions}
                       oas3Selectors={oas3Selectors}
                       pathMethod={pathMethod}
-                      isExecute={isExecute} />
+                      isExecute={isExecute}
+                      isEditing={isEditing}
+                      onParameterClick={this.handleParameterClick}
+                      isSelected={this.state.selectedParameter && 
+                        this.state.selectedParameter.get("name") === parameter.get("name") &&
+                        this.state.selectedParameter.get("in") === parameter.get("in")} />
                   ))
                 }
                 </tbody>
@@ -207,6 +255,20 @@ export default class Parameters extends Component {
             </div>
           }
         </div> : null}
+
+        {/* Parameter Edit Form */}
+        {isEditing && this.state.parametersVisible && (
+          <div className="parameter-edit-section">
+            <ParameterEditForm
+              parameter={this.state.selectedParameter}
+              onSave={this.handleParameterSave}
+              onDelete={this.handleParameterDelete}
+              onClear={this.handleParameterClear}
+              pathMethod={pathMethod}
+              specSelectors={specSelectors}
+            />
+          </div>
+        )}
 
         {this.state.callbackVisible ? <div className="callbacks-container opblock-description-wrapper">
           <Callbacks
