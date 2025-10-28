@@ -24,7 +24,12 @@ export default class ParameterEditForm extends Component {
     onClear: PropTypes.func.isRequired,
     schemas: PropTypes.array.isRequired,
     pathMethod: PropTypes.array.isRequired,
-    specSelectors: PropTypes.object.isRequired
+    specSelectors: PropTypes.object.isRequired,
+    isOperationEditMode: PropTypes.bool
+  }
+
+  static defaultProps = {
+    isOperationEditMode: false
   }
 
   constructor(props) {
@@ -150,7 +155,7 @@ export default class ParameterEditForm extends Component {
 
   render() {
     const { formData, validationErrors, typeSearch, typeDropdownOpen, itemsTypeSearch, itemsTypeDropdownOpen } = this.state
-    const { parameter } = this.props
+    const { parameter, isOperationEditMode } = this.props
     const isEditing = !!parameter
 
     const allPrimitiveTypeOptions = getPrimitiveTypeOptions()
@@ -381,7 +386,10 @@ export default class ParameterEditForm extends Component {
             className="btn btn-primary"
             onClick={this.handleSave}
           >
-            {isEditing ? "Update Parameter" : "Add Parameter"}
+            {isOperationEditMode 
+              ? (isEditing ? "Stage Update" : "Stage New Parameter")
+              : (isEditing ? "Update Parameter" : "Add Parameter")
+            }
           </button>
           
           <button
@@ -396,7 +404,7 @@ export default class ParameterEditForm extends Component {
               className="btn btn-danger"
               onClick={this.handleDelete}
             >
-              Delete Parameter
+              {isOperationEditMode ? "Stage Deletion" : "Delete Parameter"}
             </button>
           )}
         </div>

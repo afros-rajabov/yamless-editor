@@ -34,6 +34,12 @@ export default class Parameters extends Component {
     getConfigs: PropTypes.func.isRequired,
     specPath: ImPropTypes.list.isRequired,
     isEditing: PropTypes.bool,
+    
+    // Parameter buffering props
+    pendingParameters: ImPropTypes.list,
+    onParameterAdd: PropTypes.func,
+    onParameterUpdate: PropTypes.func,
+    onParameterDelete: PropTypes.func,
   }
 
 
@@ -45,6 +51,12 @@ export default class Parameters extends Component {
     onChangeKey: [],
     specPath: [],
     isEditing: false,
+    
+    // Parameter buffering defaults
+    pendingParameters: null,
+    onParameterAdd: Function.prototype,
+    onParameterUpdate: Function.prototype,
+    onParameterDelete: Function.prototype,
   }
 
   onChange = (param, value, isXml) => {
@@ -100,25 +112,42 @@ export default class Parameters extends Component {
   }
 
   handleParameterSave = (parameter, oldIdentifier) => {
-    const { specActions, pathMethod } = this.props
-    const [path, method] = pathMethod
-
-    if (oldIdentifier) {
-      // Update existing parameter
-      specActions.updateParameter(path, method, oldIdentifier, parameter)
+    const { isEditing } = this.props
+    
+    if (isEditing) {
+      // Edit mode: buffer changes
+      if (oldIdentifier) {
+        this.props.onParameterUpdate(parameter, oldIdentifier)
+      } else {
+        this.props.onParameterAdd(parameter)
+      }
     } else {
-      // Add new parameter
-      specActions.addParameter(path, method, parameter)
+      // Non-edit mode: immediate save (existing behavior)
+      const { specActions, pathMethod } = this.props
+      const [path, method] = pathMethod
+      if (oldIdentifier) {
+        specActions.updateParameter(path, method, oldIdentifier, parameter)
+      } else {
+        specActions.addParameter(path, method, parameter)
+      }
     }
-
+    
     this.setState({ selectedParameter: null })
   }
 
   handleParameterDelete = (identifier) => {
-    const { specActions, pathMethod } = this.props
-    const [path, method] = pathMethod
-
-    specActions.deleteParameter(path, method, identifier)
+    const { isEditing } = this.props
+    
+    if (isEditing) {
+      // Edit mode: buffer changes
+      this.props.onParameterDelete(identifier)
+    } else {
+      // Non-edit mode: immediate save (existing behavior)
+      const { specActions, pathMethod } = this.props
+      const [path, method] = pathMethod
+      specActions.deleteParameter(path, method, identifier)
+    }
+    
     this.setState({ selectedParameter: null })
   }
 
@@ -152,6 +181,7 @@ export default class Parameters extends Component {
       oas3Selectors,
       operation,
       isEditing,
+      pendingParameters,
     } = this.props
 
     const ParameterRow = getComponent("parameterRow")
@@ -169,7 +199,10 @@ export default class Parameters extends Component {
 
     const requestBody = operation.get("requestBody")
 
-    const groupedParametersArr = Object.values(parameters
+    // Use buffered parameters when in edit mode, otherwise use regular parameters
+    const displayParameters = pendingParameters || parameters
+
+    const groupedParametersArr = Object.values(displayParameters
       .reduce((acc, x) => {
         if (Map.isMap(x)) {
           const key = x.get("in")
@@ -266,6 +299,7 @@ export default class Parameters extends Component {
               onClear={this.handleParameterClear}
               pathMethod={pathMethod}
               specSelectors={specSelectors}
+              isOperationEditMode={isEditing}
             />
           </div>
         )}

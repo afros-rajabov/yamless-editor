@@ -31,6 +31,7 @@ import {
   ADD_PARAMETER,
   UPDATE_PARAMETER,
   DELETE_PARAMETER,
+  BATCH_UPDATE_OPERATION,
   SET_SCHEME
 } from "./actions"
 
@@ -489,6 +490,211 @@ export default {
     }
 
     // Update the spec string to reflect the changes
+    const updatedSpec = newState.get("json").toJS()
+    const specString = JSON.stringify(updatedSpec, null, 2)
+    newState = newState.set("spec", specString)
+
+    return newState
+  },
+
+  [BATCH_UPDATE_OPERATION]: (state, { payload }) => {
+    const { 
+      oldPath, 
+      oldMethod, 
+      newPath, 
+      newMethod, 
+      fieldUpdates = {}, 
+      parameterOperations = [] 
+    } = payload
+
+    let newState = state
+    const finalPath = newPath || oldPath
+    const finalMethod = newMethod || oldMethod
+
+    // Handle path/method changes first
+    if (newPath && newPath !== oldPath) {
+      // Move operation to new path
+      const operationData = newState.getIn(["json", "paths", oldPath, oldMethod])
+      if (operationData) {
+        // Remove from old location
+        newState = newState.deleteIn(["json", "paths", oldPath, oldMethod])
+        // Add to new location
+        newState = newState.setIn(["json", "paths", newPath, oldMethod], operationData)
+        
+        // Update resolved data if it exists
+        const resolvedData = newState.getIn(["resolved", "paths", oldPath, oldMethod])
+        if (resolvedData) {
+          newState = newState.deleteIn(["resolved", "paths", oldPath, oldMethod])
+          newState = newState.setIn(["resolved", "paths", newPath, oldMethod], resolvedData)
+        }
+        
+        // Update resolvedSubtrees cache
+        const resolvedSubtree = newState.getIn(["resolvedSubtrees", "paths", oldPath, oldMethod])
+        if (resolvedSubtree) {
+          newState = newState.deleteIn(["resolvedSubtrees", "paths", oldPath, oldMethod])
+          newState = newState.setIn(["resolvedSubtrees", "paths", newPath, oldMethod], resolvedSubtree)
+        }
+      }
+    }
+
+    if (newMethod && newMethod !== oldMethod) {
+      // Change method at current path
+      const operationData = newState.getIn(["json", "paths", finalPath, oldMethod])
+      if (operationData) {
+        // Remove old method
+        newState = newState.deleteIn(["json", "paths", finalPath, oldMethod])
+        // Add new method
+        newState = newState.setIn(["json", "paths", finalPath, newMethod], operationData)
+        
+        // Update resolved data if it exists
+        const resolvedData = newState.getIn(["resolved", "paths", finalPath, oldMethod])
+        if (resolvedData) {
+          newState = newState.deleteIn(["resolved", "paths", finalPath, oldMethod])
+          newState = newState.setIn(["resolved", "paths", finalPath, newMethod], resolvedData)
+        }
+        
+        // Update resolvedSubtrees cache
+        const resolvedSubtree = newState.getIn(["resolvedSubtrees", "paths", finalPath, oldMethod])
+        if (resolvedSubtree) {
+          newState = newState.deleteIn(["resolvedSubtrees", "paths", finalPath, oldMethod])
+          newState = newState.setIn(["resolvedSubtrees", "paths", finalPath, newMethod], resolvedSubtree)
+        }
+      }
+    }
+
+    // Apply field updates (summary, description)
+    if (Object.keys(fieldUpdates).length > 0) {
+      const operationData = newState.getIn(["json", "paths", finalPath, finalMethod])
+      if (operationData) {
+        let updatedOperation = operationData
+        Object.entries(fieldUpdates).forEach(([field, value]) => {
+          if (value !== null && value !== undefined) {
+            updatedOperation = updatedOperation.set(field, value)
+          }
+        })
+        newState = newState.setIn(["json", "paths", finalPath, finalMethod], updatedOperation)
+        
+        // Update resolved data if it exists
+        const resolvedData = newState.getIn(["resolved", "paths", finalPath, finalMethod])
+        if (resolvedData) {
+          let updatedResolved = resolvedData
+          Object.entries(fieldUpdates).forEach(([field, value]) => {
+            if (value !== null && value !== undefined) {
+              updatedResolved = updatedResolved.set(field, value)
+            }
+          })
+          newState = newState.setIn(["resolved", "paths", finalPath, finalMethod], updatedResolved)
+        }
+      }
+    }
+
+    // Apply parameter operations
+    if (parameterOperations.length > 0) {
+      const operationData = newState.getIn(["json", "paths", finalPath, finalMethod])
+      if (operationData) {
+        let existingParameters = operationData.get("parameters", List())
+        
+        parameterOperations.forEach(op => {
+          switch (op.type) {
+            case 'add':
+              existingParameters = existingParameters.push(fromJS(op.parameter))
+              break
+            case 'update':
+              const updateIndex = existingParameters.findIndex(param => 
+                param.get("name") === op.oldIdentifier.name && 
+                param.get("in") === op.oldIdentifier.in
+              )
+              if (updateIndex !== -1) {
+                existingParameters = existingParameters.set(updateIndex, fromJS(op.parameter))
+              }
+              break
+            case 'delete':
+              const deleteIndex = existingParameters.findIndex(param => 
+                param.get("name") === op.identifier.name && 
+                param.get("in") === op.identifier.in
+              )
+              if (deleteIndex !== -1) {
+                existingParameters = existingParameters.delete(deleteIndex)
+              }
+              break
+          }
+        })
+        
+        newState = newState.setIn(["json", "paths", finalPath, finalMethod, "parameters"], existingParameters)
+        
+        // Update resolved data if it exists
+        const resolvedData = newState.getIn(["resolved", "paths", finalPath, finalMethod])
+        if (resolvedData) {
+          let resolvedParameters = resolvedData.get("parameters", List())
+          
+          parameterOperations.forEach(op => {
+            switch (op.type) {
+              case 'add':
+                resolvedParameters = resolvedParameters.push(fromJS(op.parameter))
+                break
+              case 'update':
+                const updateIndex = resolvedParameters.findIndex(param => 
+                  param.get("name") === op.oldIdentifier.name && 
+                  param.get("in") === op.oldIdentifier.in
+                )
+                if (updateIndex !== -1) {
+                  resolvedParameters = resolvedParameters.set(updateIndex, fromJS(op.parameter))
+                }
+                break
+              case 'delete':
+                const deleteIndex = resolvedParameters.findIndex(param => 
+                  param.get("name") === op.identifier.name && 
+                  param.get("in") === op.identifier.in
+                )
+                if (deleteIndex !== -1) {
+                  resolvedParameters = resolvedParameters.delete(deleteIndex)
+                }
+                break
+            }
+          })
+          
+          newState = newState.setIn(["resolved", "paths", finalPath, finalMethod, "parameters"], resolvedParameters)
+        }
+        
+        // Update resolvedSubtrees cache
+        const currentResolvedSubtree = newState.getIn(["resolvedSubtrees", "paths", finalPath, finalMethod])
+        if (currentResolvedSubtree) {
+          let subtreeParameters = currentResolvedSubtree.get("parameters", List())
+          
+          parameterOperations.forEach(op => {
+            switch (op.type) {
+              case 'add':
+                const resolvedParameter = resolveParameterSchema(op.parameter, newState)
+                subtreeParameters = subtreeParameters.push(fromJS(resolvedParameter))
+                break
+              case 'update':
+                const updateIndex = subtreeParameters.findIndex(param => 
+                  param.get("name") === op.oldIdentifier.name && 
+                  param.get("in") === op.oldIdentifier.in
+                )
+                if (updateIndex !== -1) {
+                  const resolvedParameter = resolveParameterSchema(op.parameter, newState)
+                  subtreeParameters = subtreeParameters.set(updateIndex, fromJS(resolvedParameter))
+                }
+                break
+              case 'delete':
+                const deleteIndex = subtreeParameters.findIndex(param => 
+                  param.get("name") === op.identifier.name && 
+                  param.get("in") === op.identifier.in
+                )
+                if (deleteIndex !== -1) {
+                  subtreeParameters = subtreeParameters.delete(deleteIndex)
+                }
+                break
+            }
+          })
+          
+          newState = newState.setIn(["resolvedSubtrees", "paths", finalPath, finalMethod, "parameters"], subtreeParameters)
+        }
+      }
+    }
+
+    // Update the spec string only once at the end
     const updatedSpec = newState.get("json").toJS()
     const specString = JSON.stringify(updatedSpec, null, 2)
     newState = newState.set("spec", specString)

@@ -50,7 +50,13 @@ export default class Operation extends PureComponent {
     onCancelEdit: PropTypes.func,
     showValidationDialog: PropTypes.bool,
     validationError: PropTypes.string,
-    onCloseValidationDialog: PropTypes.func
+    onCloseValidationDialog: PropTypes.func,
+    
+    // Parameter buffering props
+    pendingParameters: ImPropTypes.list,
+    onParameterAdd: PropTypes.func,
+    onParameterUpdate: PropTypes.func,
+    onParameterDelete: PropTypes.func
   }
 
   static defaultProps = {
@@ -73,7 +79,13 @@ export default class Operation extends PureComponent {
     onCancelEdit: null,
     showValidationDialog: false,
     validationError: "",
-    onCloseValidationDialog: null
+    onCloseValidationDialog: null,
+    
+    // Parameter buffering defaults
+    pendingParameters: null,
+    onParameterAdd: null,
+    onParameterUpdate: null,
+    onParameterDelete: null
   }
 
   render() {
@@ -119,7 +131,7 @@ export default class Operation extends PureComponent {
     } = op
 
     // Get editing state from props
-    const { isEditing, selectedSummary, selectedDescription, selectedMethod, selectedPath, onSummaryChange, onDescriptionChange, onMethodChange, onPathChange, onSaveClick, onCancelEdit, showValidationDialog, validationError, onCloseValidationDialog } = this.props
+    const { isEditing, selectedSummary, selectedDescription, selectedMethod, selectedPath, onSummaryChange, onDescriptionChange, onMethodChange, onPathChange, onSaveClick, onCancelEdit, showValidationDialog, validationError, onCloseValidationDialog, pendingParameters, onParameterAdd, onParameterUpdate, onParameterDelete } = this.props
     
 
     const externalDocsUrl = externalDocs ? safeBuildUrl(externalDocs.url, specSelectors.url(), { selectedServer: oas3Selectors.selectedServer() }) : ""
@@ -242,6 +254,12 @@ export default class Operation extends PureComponent {
                   getConfigs={ getConfigs }
                   oas3Actions={ oas3Actions }
                   oas3Selectors={ oas3Selectors }
+                  
+                  // Parameter buffering props
+                  pendingParameters={pendingParameters}
+                  onParameterAdd={onParameterAdd}
+                  onParameterUpdate={onParameterUpdate}
+                  onParameterDelete={onParameterDelete}
                 />
               }
 

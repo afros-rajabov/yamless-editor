@@ -32,6 +32,7 @@ export const UPDATE_OPERATION_FIELDS = "spec_update_operation_fields"
 export const ADD_PARAMETER = "spec_add_parameter"
 export const UPDATE_PARAMETER = "spec_update_parameter"
 export const DELETE_PARAMETER = "spec_delete_parameter"
+export const BATCH_UPDATE_OPERATION = "spec_batch_update_operation"
 export const UPDATE_RESOLVED = "spec_update_resolved"
 export const UPDATE_RESOLVED_SUBTREE = "spec_update_resolved_subtree"
 export const SET_SCHEME = "set_scheme"
@@ -582,5 +583,12 @@ export function deleteParameter(path, method, parameterIdentifier) {
   return {
     type: DELETE_PARAMETER,
     payload: { path, method, parameterIdentifier }
+  }
+}
+
+export function batchUpdateOperation(payload) {
+  return {
+    type: BATCH_UPDATE_OPERATION,
+    payload
   }
 }

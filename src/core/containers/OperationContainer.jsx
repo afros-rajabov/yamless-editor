@@ -2,7 +2,7 @@ import React, { PureComponent } from "react"
 import PropTypes from "prop-types"
 import ImPropTypes from "react-immutable-proptypes"
 import { opId } from "swagger-client/es/helpers"
-import { Iterable, fromJS, Map } from "immutable"
+import { Iterable, fromJS, Map, List } from "immutable"
 import { validatePath, checkOperationExists } from "../utils/path-validation"
 
 export default class OperationContainer extends PureComponent {
@@ -20,7 +20,9 @@ export default class OperationContainer extends PureComponent {
       selectedMethod: null,
       selectedPath: null,
       showValidationDialog: false,
-      validationError: ""
+      validationError: "",
+      pendingParameters: null,
+      pendingParameterOperations: []
     }
   }
 
@@ -164,13 +166,27 @@ export default class OperationContainer extends PureComponent {
     // Get summary and description from the resolved operation data
     const summary = resolvedSubtree.get("summary") || ''
     const description = resolvedSubtree.get("description") || ''
+    const parameters = resolvedSubtree.get("parameters", List())
+    
+    // Create clean copies of parameters to avoid circular references
+    const cleanParameters = parameters.map(param => {
+      try {
+        // Convert to plain JS and back to ensure clean serializable data
+        return fromJS(param.toJS())
+      } catch (error) {
+        console.warn('Failed to clean parameter, using original:', error)
+        return param
+      }
+    })
     
     this.setState({
       isEditing: true,
       selectedSummary: summary,
       selectedDescription: description,
       selectedMethod: method,
-      selectedPath: path
+      selectedPath: path,
+      pendingParameters: cleanParameters, // Initialize with clean params
+      pendingParameterOperations: []
     })
   }
 
@@ -180,7 +196,9 @@ export default class OperationContainer extends PureComponent {
       selectedSummary: null,
       selectedDescription: null,
       selectedMethod: null,
-      selectedPath: null
+      selectedPath: null,
+      pendingParameters: null,
+      pendingParameterOperations: []
     })
   }
 
@@ -198,6 +216,67 @@ export default class OperationContainer extends PureComponent {
 
   handlePathChange = (newPath) => {
     this.setState({ selectedPath: newPath })
+  }
+
+  handleParameterAdd = (parameter) => {
+    this.setState(prevState => {
+      try {
+        // Create a clean, serializable copy of the parameter
+        const cleanParameter = fromJS(parameter)
+        const updatedParameters = prevState.pendingParameters.push(cleanParameter)
+        return {
+          pendingParameters: updatedParameters,
+          pendingParameterOperations: [
+            ...prevState.pendingParameterOperations,
+            { type: 'add', parameter: { ...parameter } } // Store clean copy for later use
+          ]
+        }
+      } catch (error) {
+        console.error('Failed to add parameter:', error)
+        return prevState
+      }
+    })
+  }
+
+  handleParameterUpdate = (newParameter, oldIdentifier) => {
+    this.setState(prevState => {
+      const paramIndex = prevState.pendingParameters.findIndex(p =>
+        p.get("name") === oldIdentifier.name && p.get("in") === oldIdentifier.in
+      )
+      if (paramIndex === -1) return prevState
+      
+      try {
+        // Create a clean, serializable copy of the parameter
+        const cleanParameter = fromJS(newParameter)
+        return {
+          pendingParameters: prevState.pendingParameters.set(paramIndex, cleanParameter),
+          pendingParameterOperations: [
+            ...prevState.pendingParameterOperations,
+            { type: 'update', parameter: { ...newParameter }, oldIdentifier: { ...oldIdentifier } } // Create clean copies
+          ]
+        }
+      } catch (error) {
+        console.error('Failed to update parameter:', error)
+        return prevState
+      }
+    })
+  }
+
+  handleParameterDelete = (identifier) => {
+    this.setState(prevState => {
+      const paramIndex = prevState.pendingParameters.findIndex(p =>
+        p.get("name") === identifier.name && p.get("in") === identifier.in
+      )
+      if (paramIndex === -1) return prevState
+      
+      return {
+        pendingParameters: prevState.pendingParameters.delete(paramIndex),
+        pendingParameterOperations: [
+          ...prevState.pendingParameterOperations,
+          { type: 'delete', identifier: { ...identifier } } // Create clean copy
+        ]
+      }
+    })
   }
 
   showValidationDialog = (errorMessage) => {
@@ -238,50 +317,43 @@ export default class OperationContainer extends PureComponent {
       return
     }
 
-    // Handle both path and method changes with correct logic
-    if (selectedPath && selectedPath !== path) {
-      // Path is changing - move the operation to the new path
-      if (selectedMethod && selectedMethod !== method) {
-        // Both path and method are changing
-        // First move to new path with old method, then change method
-        specActions.updateOperationPath(path, selectedPath, method)
-        specActions.updateOperationMethod(selectedPath, method, selectedMethod)
-      } else {
-        // Only path is changing
-        specActions.updateOperationPath(path, selectedPath, method)
-      }
-    } else if (selectedMethod && selectedMethod !== method) {
-      // Only method is changing
-      specActions.updateOperationMethod(path, method, selectedMethod)
-    }
-
     // Get current values to compare against
     const resolvedSubtree = this.getResolvedSubtree() || new Map()
     const currentSummary = resolvedSubtree.get("summary") || ''
     const currentDescription = resolvedSubtree.get("description") || ''
     
-    // Update summary and description fields only if they actually changed
-    const updates = {}
+    // Prepare field updates only if they actually changed
+    const fieldUpdates = {}
     if (selectedSummary !== null && selectedSummary !== currentSummary) {
-      updates.summary = selectedSummary
+      fieldUpdates.summary = selectedSummary
     }
     if (selectedDescription !== null && selectedDescription !== currentDescription) {
-      updates.description = selectedDescription
+      fieldUpdates.description = selectedDescription
     }
+
+    // Prepare parameter operations
+    const parameterOperations = this.state.pendingParameterOperations || []
+
+    // Use batched action to update everything at once
+    specActions.batchUpdateOperation({
+      oldPath: path,
+      oldMethod: method,
+      newPath: selectedPath,
+      newMethod: selectedMethod,
+      fieldUpdates,
+      parameterOperations
+    })
     
-    // Reset editing state first
+    // Reset editing state
     this.setState({
       isEditing: false,
       selectedSummary: null,
       selectedDescription: null,
       selectedMethod: null,
-      selectedPath: null
+      selectedPath: null,
+      pendingParameters: null,
+      pendingParameterOperations: []
     })
-
-    // Only call updateOperationFields if we have actual changes
-    if (Object.keys(updates).length > 0) {
-      specActions.updateOperationFields(finalPath, finalMethod, updates)
-    }
   }
 
 
@@ -417,6 +489,12 @@ export default class OperationContainer extends PureComponent {
         showValidationDialog={this.state.showValidationDialog}
         validationError={this.state.validationError}
         onCloseValidationDialog={this.closeValidationDialog}
+        
+        // Pass parameter buffering state and handlers
+        pendingParameters={this.state.pendingParameters}
+        onParameterAdd={this.handleParameterAdd}
+        onParameterUpdate={this.handleParameterUpdate}
+        onParameterDelete={this.handleParameterDelete}
       />
     )
   }
