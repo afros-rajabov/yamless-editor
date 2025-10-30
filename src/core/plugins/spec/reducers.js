@@ -55,10 +55,13 @@ const resolveParameterSchema = (parameter, state) => {
   const schemaDefinition = state.getIn(["json", "components", "schemas", schemaName])
   
   if (schemaDefinition) {
-    // Return parameter with resolved schema (merged with original to preserve $ref for documentation)
+    // Return parameter with resolved schema AND preserve $ref
     return {
       ...parameter,
-      schema: schemaDefinition.toJS()
+      schema: {
+        $ref: schemaRef,  // Preserve the original reference
+        ...schemaDefinition.toJS()  // Spread resolved content
+      }
     }
   }
   
