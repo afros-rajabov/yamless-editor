@@ -64,7 +64,7 @@ export default class ParameterEditForm extends Component {
       in: "query",
       description: "",
       required: false,
-      type: "",
+      type: "string",
       format: "",
       default: "",
       example: "",
@@ -180,10 +180,6 @@ export default class ParameterEditForm extends Component {
 
     return (
       <div className="parameter-edit-form">
-        <div className="parameter-edit-form-header">
-          <h4>{isEditing ? "Edit Parameter" : "Add New Parameter"}</h4>
-        </div>
-
         {validationErrors.length > 0 && (
           <div className="parameter-edit-form-errors">
             {validationErrors.map((error, index) => (

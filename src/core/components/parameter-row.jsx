@@ -25,6 +25,7 @@ export default class ParameterRow extends Component {
     isEditing: PropTypes.bool,
     onParameterClick: PropTypes.func,
     isSelected: PropTypes.bool,
+    onParameterEditClick: PropTypes.func,
   }
 
   constructor(props, context) {
@@ -317,17 +318,13 @@ export default class ParameterRow extends Component {
         schema={ schema }
       />
 
-    const handleRowClick = () => {
-      if (isEditing && onParameterClick) {
-        onParameterClick(rawParam)
-      }
-    }
+    const handleRowClick = () => {}
 
     return (
       <tr 
         data-param-name={param.get("name")} 
         data-param-in={param.get("in")}
-        className={`${isEditing ? 'parameter-row-editable' : ''} ${isSelected ? 'parameter-row-selected' : ''}`}
+        className={""}
         onClick={handleRowClick}
       >
         <td className="parameters-col_name">
@@ -346,6 +343,7 @@ export default class ParameterRow extends Component {
         </td>
 
         <td className="parameters-col_description">
+          { /* edit button moved inline with input for primitives below */ }
           { param.get("description") ? <Markdown source={ param.get("description") }/> : null }
 
           { (bodyParam || !isExecute) && isDisplayParamEnum ?
@@ -385,17 +383,46 @@ export default class ParameterRow extends Component {
           }
 
           { (isObject || isArrayOfObjects) ? (
-            <ModelExample
-              getComponent={getComponent}
-              specPath={specPath.push("schema")}
-              getConfigs={getConfigs}
-              isExecute={isExecute}
-              specSelectors={specSelectors}
-              schema={schema}
-              example={jsonSchemaForm}
-            />
-            ) : jsonSchemaForm
-          }
+            <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
+              <div style={{ flex: 1 }}>
+                <ModelExample
+                  getComponent={getComponent}
+                  specPath={specPath.push("schema")}
+                  getConfigs={getConfigs}
+                  isExecute={isExecute}
+                  specSelectors={specSelectors}
+                  schema={schema}
+                  example={jsonSchemaForm}
+                />
+              </div>
+              { isEditing && this.props.onParameterEditClick ? (
+                <button
+                  type="button"
+                  className="btn"
+                  style={{ backgroundColor: "transparent", borderColor: "#fca130", color: "#fca130" }}
+                  onClick={(e) => { e.stopPropagation(); this.props.onParameterEditClick() }}
+                >
+                  Edit
+                </button>
+              ) : null }
+            </div>
+          ) : (
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <div style={{ flex: 1 }}>
+                {jsonSchemaForm}
+              </div>
+              { isEditing && this.props.onParameterEditClick ? (
+                <button
+                  type="button"
+                  className="btn"
+                  style={{ backgroundColor: "transparent", borderColor: "#fca130", color: "#fca130" }}
+                  onClick={(e) => { e.stopPropagation(); this.props.onParameterEditClick() }}
+                >
+                  Edit
+                </button>
+              ) : null }
+            </div>
+          )}
 
           {
             bodyParam && schema ? <ModelExample getComponent={ getComponent }
@@ -433,6 +460,8 @@ export default class ParameterRow extends Component {
 
           { !showCommonExtensions || !commonExt.size ? null : commonExt.entrySeq().map(([key, v]) => <ParameterExt key={`${key}-${v}`} xKey={key} xVal={v} /> )}
           { !showExtensions || !extensions.size ? null : extensions.entrySeq().map(([key, v]) => <ParameterExt key={`${key}-${v}`} xKey={key} xVal={v} /> )}
+
+          { /* Edit button intentionally only in name cell */ }
 
         </td>
 

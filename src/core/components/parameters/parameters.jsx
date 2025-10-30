@@ -12,6 +12,7 @@ export default class Parameters extends Component {
       callbackVisible: false,
       parametersVisible: true,
       selectedParameter: null,
+      showParameterDialog: false,
     }
   }
 
@@ -132,7 +133,7 @@ export default class Parameters extends Component {
       }
     }
     
-    this.setState({ selectedParameter: null })
+    this.setState({ selectedParameter: null, showParameterDialog: false })
   }
 
   handleParameterDelete = (identifier) => {
@@ -148,7 +149,7 @@ export default class Parameters extends Component {
       specActions.deleteParameter(path, method, identifier)
     }
     
-    this.setState({ selectedParameter: null })
+    this.setState({ selectedParameter: null, showParameterDialog: false })
   }
 
   handleParameterClear = () => {
@@ -158,7 +159,7 @@ export default class Parameters extends Component {
   componentDidUpdate(prevProps) {
     // Clear selected parameter when edit mode is turned off
     if (prevProps.isEditing && !this.props.isEditing) {
-      this.setState({ selectedParameter: null })
+      this.setState({ selectedParameter: null, showParameterDialog: false })
     }
   }
 
@@ -185,7 +186,7 @@ export default class Parameters extends Component {
     } = this.props
 
     const ParameterRow = getComponent("parameterRow")
-    const ParameterEditForm = getComponent("parameterEditForm")
+    const ParameterEditDialog = getComponent("parameterEditDialog", false, { failSilently: true })
     const TryItOutButton = getComponent("TryItOutButton")
     const ContentType = getComponent("contentType")
     const Callbacks = getComponent("Callbacks", true)
@@ -237,7 +238,7 @@ export default class Parameters extends Component {
               <h4 className="opblock-title">Parameters</h4>
             </div>
           )}
-          {allowTryItOut ? (
+          {!isEditing && allowTryItOut ? (
             <TryItOutButton
               isOAS3={specSelectors.isOAS3()}
               hasUserEditedBody={oas3Selectors.hasUserEditedBody(...pathMethod)}
@@ -245,6 +246,14 @@ export default class Parameters extends Component {
               onCancelClick={this.props.onCancelClick}
               onTryoutClick={onTryoutClick}
               onResetClick={() => onResetClick(pathMethod)}/>
+          ) : null}
+          {isEditing && this.state.parametersVisible ? (
+            <button
+              className="btn authorize"
+              onClick={() => this.setState({ selectedParameter: null, showParameterDialog: true })}
+            >
+              Add parameter
+            </button>
           ) : null}
         </div>
         {this.state.parametersVisible ? <div className="parameters-container">
@@ -277,10 +286,10 @@ export default class Parameters extends Component {
                       pathMethod={pathMethod}
                       isExecute={isExecute}
                       isEditing={isEditing}
-                      onParameterClick={this.handleParameterClick}
-                      isSelected={this.state.selectedParameter && 
-                        this.state.selectedParameter.get("name") === parameter.get("name") &&
-                        this.state.selectedParameter.get("in") === parameter.get("in")} />
+                      onParameterClick={null}
+                      isSelected={false}
+                      onParameterEditClick={() => this.setState({ selectedParameter: parameter, showParameterDialog: true })}
+                    />
                   ))
                 }
                 </tbody>
@@ -289,20 +298,21 @@ export default class Parameters extends Component {
           }
         </div> : null}
 
-        {/* Parameter Edit Form */}
-        {isEditing && this.state.parametersVisible && (
-          <div className="parameter-edit-section">
-            <ParameterEditForm
-              parameter={this.state.selectedParameter}
-              onSave={this.handleParameterSave}
-              onDelete={this.handleParameterDelete}
-              onClear={this.handleParameterClear}
-              pathMethod={pathMethod}
-              specSelectors={specSelectors}
-              isOperationEditMode={isEditing}
-            />
-          </div>
-        )}
+        {/* Parameter Edit Dialog */}
+        {isEditing && this.state.parametersVisible && ParameterEditDialog ? (
+          <ParameterEditDialog
+            isOpen={this.state.showParameterDialog}
+            parameter={this.state.selectedParameter}
+            onSave={this.handleParameterSave}
+            onDelete={this.handleParameterDelete}
+            onClear={this.handleParameterClear}
+            onClose={() => this.setState({ showParameterDialog: false })}
+            getComponent={getComponent}
+            specSelectors={specSelectors}
+            pathMethod={pathMethod}
+            isOperationEditMode={isEditing}
+          />
+        ) : null}
 
         {this.state.callbackVisible ? <div className="callbacks-container opblock-description-wrapper">
           <Callbacks
