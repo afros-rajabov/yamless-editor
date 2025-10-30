@@ -332,7 +332,70 @@ export default class OperationContainer extends PureComponent {
     }
 
     // Prepare parameter operations
-    const parameterOperations = this.state.pendingParameterOperations || []
+    let parameterOperations = this.state.pendingParameterOperations || []
+
+    // If path changed, auto-detect path params in changed sections and add missing ones
+    if (selectedPath && selectedPath !== path) {
+      const oldSegs = (path || "").split("/")
+      const newSegs = (selectedPath || "").split("/")
+
+      // Find first differing index
+      let firstDiff = 0
+      const minLen = Math.min(oldSegs.length, newSegs.length)
+      while (firstDiff < minLen && oldSegs[firstDiff] === newSegs[firstDiff]) {
+        firstDiff++
+      }
+
+      // The changed section is from firstDiff to end of newSegs
+      const changedSegs = newSegs.slice(firstDiff)
+
+      // Extract path params from changed segments: tokens like {name}
+      const paramNameRegex = /\{([^\}]+)\}/g
+      const detectedNames = new Set()
+      changedSegs.forEach(seg => {
+        let match
+        while ((match = paramNameRegex.exec(seg)) !== null) {
+          const name = (match[1] || "").trim()
+          if (name) detectedNames.add(name)
+        }
+      })
+
+      if (detectedNames.size > 0) {
+        // Build a set of existing path parameter names
+        const existingPathParamNames = new Set(
+          (this.state.pendingParameters || [])
+            .toArray?.()
+            .map(p => p.get && p.get("in") === "path" ? p.get("name") : null)
+            .filter(Boolean)
+        )
+
+        // Also consider operations already queued to add path params
+        parameterOperations
+          .filter(op => op.type === 'add' && op.parameter && op.parameter.in === 'path')
+          .forEach(op => {
+            if (op.parameter.name) existingPathParamNames.add(op.parameter.name)
+          })
+
+        detectedNames.forEach(name => {
+          if (!existingPathParamNames.has(name)) {
+            // Add minimal valid path parameter (required true by spec)
+            parameterOperations = [
+              ...parameterOperations,
+              {
+                type: 'add',
+                parameter: {
+                  name,
+                  in: 'path',
+                  required: true,
+                  schema: { type: 'string' }
+                }
+              }
+            ]
+            existingPathParamNames.add(name)
+          }
+        })
+      }
+    }
 
     // Use batched action to update everything at once
     specActions.batchUpdateOperation({
