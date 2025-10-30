@@ -256,19 +256,53 @@ export default class ParameterRow extends Component {
       schema = this.composeJsonSchema(schema)
     }
 
-    let format = schema ? schema.get("format") : null
+    // Resolve $ref for edit-mode buffered parameters so complex schemas render correctly
+    const resolveRef = (ref) => {
+      if (!ref || !specSelectors) return null
+      const pathParts = String(ref).replace(/^#\//, "").split("/")
+      // Try resolved subtree first
+      if (specSelectors.specResolvedSubtree) {
+        const resolved = specSelectors.specResolvedSubtree(pathParts)
+        if (resolved) return resolved
+      }
+      // Fallback to raw spec JSON
+      if (specSelectors.specJson) {
+        const raw = specSelectors.specJson().getIn(pathParts)
+        if (raw) return raw
+      }
+      return null
+    }
+
+    let displaySchema = schema
+    const schemaRef = schema && schema.get && schema.get("$ref")
+    if (schemaRef) {
+      const resolved = resolveRef(schemaRef)
+      if (resolved) {
+        displaySchema = resolved
+      }
+    } else if (schema && schema.get && schema.get("items") && schema.getIn(["items", "$ref"])) {
+      const itemsRef = schema.getIn(["items", "$ref"]) 
+      const resolvedItems = resolveRef(itemsRef)
+      if (resolvedItems) {
+        displaySchema = schema.set("items", resolvedItems)
+      }
+    }
+
+    let format = displaySchema ? displaySchema.get("format") : null
     let isFormData = inType === "formData"
     let isFormDataSupported = "FormData" in win
     let required = param.get("required")
 
-    const schemaObjectType = fn.getSchemaObjectType(schema)
-    const schemaItemsType = fn.getSchemaObjectType(schema?.get("items"))
-    const schemaObjectTypeLabel = fn.getSchemaObjectTypeLabel(schema)
-    const isObject = !bodyParam && schemaObjectType === "object"
-    const isArrayOfObjects = !bodyParam && schemaItemsType === "object"
+    const schemaObjectType = fn.getSchemaObjectType(displaySchema)
+    const schemaItemsType = fn.getSchemaObjectType(displaySchema?.get("items"))
+    const schemaObjectTypeLabel = fn.getSchemaObjectTypeLabel(displaySchema)
+    const hasSchemaRef = displaySchema && displaySchema.get && !!displaySchema.get("$ref")
+    const itemsHasRef = displaySchema && displaySchema.getIn && !!displaySchema.getIn(["items", "$ref"]) 
+    const isObject = !bodyParam && (schemaObjectType === "object" || hasSchemaRef)
+    const isArrayOfObjects = !bodyParam && (schemaItemsType === "object" || itemsHasRef)
 
     let value = paramWithMeta ? paramWithMeta.get("value") : ""
-    let commonExt = showCommonExtensions ? getCommonExtensions(schema) : null
+    let commonExt = showCommonExtensions ? getCommonExtensions(displaySchema) : null
     let extensions = showExtensions ? getExtensions(param) : null
 
     let paramItems // undefined
@@ -277,15 +311,15 @@ export default class ParameterRow extends Component {
     let paramExample // undefined
     let isDisplayParamEnum = false
 
-    if ( param !== undefined && schema ) {
-      paramItems = schema.get("items")
+    if ( param !== undefined && displaySchema ) {
+      paramItems = displaySchema.get("items")
     }
 
     if (paramItems !== undefined) {
       paramEnum = paramItems.get("enum")
       paramDefaultValue = paramItems.get("default")
-    } else if (schema) {
-      paramEnum = schema.get("enum")
+    } else if (displaySchema) {
+      paramEnum = displaySchema.get("enum")
     }
 
     if ( paramEnum && paramEnum.size && paramEnum.size > 0) {
@@ -294,8 +328,8 @@ export default class ParameterRow extends Component {
 
     // Default and Example Value for readonly doc
     if ( param !== undefined ) {
-      if (schema) {
-        paramDefaultValue = schema.get("default")
+      if (displaySchema) {
+        paramDefaultValue = displaySchema.get("default")
       }
       if (paramDefaultValue === undefined) {
         paramDefaultValue = param.get("default")
@@ -315,7 +349,7 @@ export default class ParameterRow extends Component {
         description={param.get("name")}
         onChange={ this.onChangeWrapper }
         errors={ paramWithMeta.get("errors") }
-        schema={ schema }
+        schema={ displaySchema }
       />
 
     const handleRowClick = () => {}
@@ -385,13 +419,13 @@ export default class ParameterRow extends Component {
           { (isObject || isArrayOfObjects) ? (
             <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
               <div style={{ flex: 1 }}>
-                <ModelExample
+            <ModelExample
                   getComponent={getComponent}
                   specPath={specPath.push("schema")}
                   getConfigs={getConfigs}
                   isExecute={isExecute}
                   specSelectors={specSelectors}
-                  schema={schema}
+              schema={displaySchema}
                   example={jsonSchemaForm}
                 />
               </div>
@@ -425,12 +459,12 @@ export default class ParameterRow extends Component {
           )}
 
           {
-            bodyParam && schema ? <ModelExample getComponent={ getComponent }
+            bodyParam && displaySchema ? <ModelExample getComponent={ getComponent }
                                                 specPath={specPath.push("schema")}
                                                 getConfigs={ getConfigs }
                                                 isExecute={ isExecute }
                                                 specSelectors={ specSelectors }
-                                                schema={ schema }
+                                                schema={ displaySchema }
                                                 example={ bodyParam }
                                                 includeWriteOnly={ true }/>
               : null
