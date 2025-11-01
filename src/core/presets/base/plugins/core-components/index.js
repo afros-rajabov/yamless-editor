@@ -31,6 +31,8 @@ import Responses from "core/components/responses"
 import Response from "core/components/response"
 import ResponseExtension from "core/components/response-extension"
 import ResponseBody from "core/components/response-body"
+import ResponseEditDialog from "core/components/response-edit-dialog"
+import ResponseEditForm from "core/components/response-edit-form"
 import { Parameters } from "core/components/parameters"
 import ParameterExt from "core/components/parameter-extension"
 import ParameterIncludeEmpty from "core/components/parameter-include-empty"
@@ -98,6 +100,8 @@ const CoreComponentsPlugin = () => ({
     response: Response,
     ResponseExtension: ResponseExtension,
     responseBody: ResponseBody,
+    responseEditDialog: ResponseEditDialog,
+    responseEditForm: ResponseEditForm,
     parameters: Parameters,
     parameterRow: ParameterRow,
     parameterEditForm: ParameterEditForm,
