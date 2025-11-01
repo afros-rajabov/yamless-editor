@@ -56,7 +56,13 @@ export default class Operation extends PureComponent {
     pendingParameters: ImPropTypes.list,
     onParameterAdd: PropTypes.func,
     onParameterUpdate: PropTypes.func,
-    onParameterDelete: PropTypes.func
+    onParameterDelete: PropTypes.func,
+
+    // Response buffering props
+    pendingResponses: ImPropTypes.map,
+    onResponseAdd: PropTypes.func,
+    onResponseUpdate: PropTypes.func,
+    onResponseDelete: PropTypes.func,
   }
 
   static defaultProps = {
@@ -85,7 +91,13 @@ export default class Operation extends PureComponent {
     pendingParameters: null,
     onParameterAdd: null,
     onParameterUpdate: null,
-    onParameterDelete: null
+    onParameterDelete: null,
+
+    // Response buffering defaults
+    pendingResponses: null,
+    onResponseAdd: null,
+    onResponseUpdate: null,
+    onResponseDelete: null
   }
 
   render() {
@@ -131,7 +143,7 @@ export default class Operation extends PureComponent {
     } = op
 
     // Get editing state from props
-    const { isEditing, selectedSummary, selectedDescription, selectedMethod, selectedPath, onSummaryChange, onDescriptionChange, onMethodChange, onPathChange, onSaveClick, onCancelEdit, showValidationDialog, validationError, onCloseValidationDialog, pendingParameters, onParameterAdd, onParameterUpdate, onParameterDelete } = this.props
+    const { isEditing, selectedSummary, selectedDescription, selectedMethod, selectedPath, onSummaryChange, onDescriptionChange, onMethodChange, onPathChange, onSaveClick, onCancelEdit, showValidationDialog, validationError, onCloseValidationDialog, pendingParameters, onParameterAdd, onParameterUpdate, onParameterDelete, pendingResponses, onResponseAdd, onResponseUpdate, onResponseDelete } = this.props
     
 
     const externalDocsUrl = externalDocs ? safeBuildUrl(externalDocs.url, specSelectors.url(), { selectedServer: oas3Selectors.selectedServer() }) : ""
@@ -337,7 +349,13 @@ export default class Operation extends PureComponent {
                     path={ path }
                     method={ method }
                     displayRequestDuration={ displayRequestDuration }
-                    fn={fn} />
+                    fn={fn}
+                    isEditing={isEditing}
+                    pendingResponses={pendingResponses}
+                    onResponseAdd={onResponseAdd}
+                    onResponseUpdate={onResponseUpdate}
+                    onResponseDelete={onResponseDelete}
+                  />
               }
 
               { !showExtensions || !extensions.size ? null :

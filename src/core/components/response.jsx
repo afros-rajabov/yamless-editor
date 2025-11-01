@@ -44,12 +44,16 @@ export default class Response extends React.Component {
     contentType: PropTypes.string,
     activeExamplesKey: PropTypes.string,
     controlsAcceptHeader: PropTypes.bool,
-    onContentTypeChange: PropTypes.func
+    onContentTypeChange: PropTypes.func,
+    isEditing: PropTypes.bool,
+    onEdit: PropTypes.func,
   }
 
   static defaultProps = {
     response: fromJS({}),
-    onContentTypeChange: () => {}
+    onContentTypeChange: () => {},
+    isEditing: false,
+    onEdit: null,
   }
 
   _onContentTypeChange = (value) => {
@@ -87,6 +91,8 @@ export default class Response extends React.Component {
       contentType,
       controlsAcceptHeader,
       oas3Actions,
+      isEditing,
+      onEdit,
     } = this.props
 
     let { inferSchema, getSampleSchema } = fn
@@ -113,9 +119,57 @@ export default class Response extends React.Component {
     const activeMediaType = response.getIn(["content", activeContentType], Map({}))
     const examplesForMediaType = activeMediaType.get("examples", null)
 
+    // Resolve $ref for edit-mode buffered responses so schema references render correctly
+    const resolveRef = (ref) => {
+      if (!ref || !specSelectors) return null
+      const pathParts = String(ref).replace(/^#\//, "").split("/")
+      // Try resolved subtree first
+      if (specSelectors.specResolvedSubtree) {
+        const resolved = specSelectors.specResolvedSubtree(pathParts)
+        if (resolved) return resolved
+      }
+      // Fallback to raw spec JSON
+      if (specSelectors.specJson) {
+        const raw = specSelectors.specJson().getIn(pathParts)
+        if (raw) return raw
+      }
+      return null
+    }
+
+    // Declare oas3SchemaForContentType outside the if block so it's available for sampleSchema
+    let oas3SchemaForContentType = null
+
     // Goal: find a schema value for `schema`
     if(isOAS3) {
-      const oas3SchemaForContentType = activeMediaType.get("schema")
+      oas3SchemaForContentType = activeMediaType.get("schema")
+      
+      // Resolve schema reference if it's a $ref in edit mode (for staged responses)
+      // This ensures staged responses with schema references render correctly
+      if (isEditing && oas3SchemaForContentType) {
+        // Handle both Immutable Map and plain object schemas
+        const schemaObj = oas3SchemaForContentType.toJS ? oas3SchemaForContentType.toJS() : oas3SchemaForContentType
+        const schemaRef = schemaObj?.$ref
+        
+        if (schemaRef) {
+          const resolved = resolveRef(schemaRef)
+          if (resolved) {
+            // Use resolved schema for display while preserving original structure
+            const resolvedJS = resolved.toJS ? resolved.toJS() : resolved
+            // Create a merged schema with resolved content but preserve $ref
+            oas3SchemaForContentType = fromJS({
+              ...resolvedJS,
+              $ref: schemaRef
+            })
+          } else {
+            // If resolution fails, ensure $ref is still preserved
+            // Convert to plain object and back to ensure structure is correct
+            oas3SchemaForContentType = fromJS({
+              ...schemaObj,
+              $ref: schemaRef
+            })
+          }
+        }
+      }
 
       schema = oas3SchemaForContentType ? inferSchema(oas3SchemaForContentType.toJS()) : null
       specPathWithPossibleSchema = oas3SchemaForContentType ? List(["content", this.state.responseContentType, "schema"]) : specPath
@@ -133,7 +187,13 @@ export default class Response extends React.Component {
 
     // Goal: find an example value for `sampleResponse`
     if(isOAS3) {
-      sampleSchema = activeMediaType.get("schema")?.toJS()
+      // Use the resolved schema if available (for staged responses with $ref)
+      // Otherwise fall back to the original schema from activeMediaType
+      if (oas3SchemaForContentType) {
+        sampleSchema = oas3SchemaForContentType.toJS()
+      } else {
+        sampleSchema = activeMediaType.get("schema")?.toJS()
+      }
       if(Map.isMap(examplesForMediaType) && !examplesForMediaType.isEmpty()) {
         const targetExamplesKey = this.getTargetExamplesKey()
         const targetExample = examplesForMediaType
@@ -179,6 +239,18 @@ export default class Response extends React.Component {
         <td className="response-col_description">
 
           <div className="response-col_description__inner">
+            {isEditing && onEdit ? (
+              <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 8 }}>
+                <button
+                  type="button"
+                  className="btn"
+                  style={{ backgroundColor: "transparent", borderColor: "#fca130", color: "#fca130" }}
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); onEdit() }}
+                >
+                  Edit
+                </button>
+              </div>
+            ) : null}
             <Markdown source={ response.get( "description" ) } />
           </div>
 

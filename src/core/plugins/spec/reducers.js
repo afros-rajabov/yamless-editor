@@ -1,4 +1,4 @@
-import { fromJS, List } from "immutable"
+import { fromJS, List, Map } from "immutable"
 import { fromJSOrdered, validateParam, paramToValue, paramToIdentifier } from "core/utils"
 import win from "core/window"
 
@@ -507,7 +507,8 @@ export default {
       newPath, 
       newMethod, 
       fieldUpdates = {}, 
-      parameterOperations = [] 
+      parameterOperations = [],
+      responseOperations = [],
     } = payload
 
     let newState = state
@@ -693,6 +694,80 @@ export default {
           })
           
           newState = newState.setIn(["resolvedSubtrees", "paths", finalPath, finalMethod, "parameters"], subtreeParameters)
+        }
+      }
+    }
+
+    if (responseOperations.length > 0) {
+      const operationData = newState.getIn(["json", "paths", finalPath, finalMethod])
+      if (operationData) {
+        let existingResponses = operationData.get("responses", Map())
+
+        responseOperations.forEach(op => {
+          switch (op.type) {
+            case "add":
+              existingResponses = existingResponses.set(op.code, fromJS(op.response))
+              break
+            case "update":
+              if (op.previousCode && op.previousCode !== op.code) {
+                existingResponses = existingResponses.delete(op.previousCode)
+              }
+              existingResponses = existingResponses.set(op.code, fromJS(op.response))
+              break
+            case "delete":
+              existingResponses = existingResponses.delete(op.code)
+              break
+          }
+        })
+
+        newState = newState.setIn(["json", "paths", finalPath, finalMethod, "responses"], existingResponses)
+
+        const resolvedData = newState.getIn(["resolved", "paths", finalPath, finalMethod])
+        if (resolvedData) {
+          let resolvedResponses = resolvedData.get("responses", Map())
+
+          responseOperations.forEach(op => {
+            switch (op.type) {
+              case "add":
+                resolvedResponses = resolvedResponses.set(op.code, fromJS(op.response))
+                break
+              case "update":
+                if (op.previousCode && op.previousCode !== op.code) {
+                  resolvedResponses = resolvedResponses.delete(op.previousCode)
+                }
+                resolvedResponses = resolvedResponses.set(op.code, fromJS(op.response))
+                break
+              case "delete":
+                resolvedResponses = resolvedResponses.delete(op.code)
+                break
+            }
+          })
+
+          newState = newState.setIn(["resolved", "paths", finalPath, finalMethod, "responses"], resolvedResponses)
+        }
+
+        const currentResolvedSubtree = newState.getIn(["resolvedSubtrees", "paths", finalPath, finalMethod])
+        if (currentResolvedSubtree) {
+          let subtreeResponses = currentResolvedSubtree.get("responses", Map())
+
+          responseOperations.forEach(op => {
+            switch (op.type) {
+              case "add":
+                subtreeResponses = subtreeResponses.set(op.code, fromJS(op.response))
+                break
+              case "update":
+                if (op.previousCode && op.previousCode !== op.code) {
+                  subtreeResponses = subtreeResponses.delete(op.previousCode)
+                }
+                subtreeResponses = subtreeResponses.set(op.code, fromJS(op.response))
+                break
+              case "delete":
+                subtreeResponses = subtreeResponses.delete(op.code)
+                break
+            }
+          })
+
+          newState = newState.setIn(["resolvedSubtrees", "paths", finalPath, finalMethod, "responses"], subtreeResponses)
         }
       }
     }

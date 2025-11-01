@@ -22,7 +22,9 @@ export default class OperationContainer extends PureComponent {
       showValidationDialog: false,
       validationError: "",
       pendingParameters: null,
-      pendingParameterOperations: []
+      pendingParameterOperations: [],
+      pendingResponses: null,
+      pendingResponseOperations: []
     }
   }
 
@@ -167,6 +169,7 @@ export default class OperationContainer extends PureComponent {
     const summary = resolvedSubtree.get("summary") || ''
     const description = resolvedSubtree.get("description") || ''
     const parameters = resolvedSubtree.get("parameters", List())
+    const responses = resolvedSubtree.get("responses", Map())
     
     // Create clean copies of parameters to avoid circular references
     const cleanParameters = parameters.map(param => {
@@ -178,6 +181,15 @@ export default class OperationContainer extends PureComponent {
         return param
       }
     })
+
+    const cleanResponses = responses.map(response => {
+      try {
+        return fromJS(response?.toJS ? response.toJS() : response)
+      } catch (error) {
+        console.warn('Failed to clean response, using original:', error)
+        return response
+      }
+    })
     
     this.setState({
       isEditing: true,
@@ -186,7 +198,9 @@ export default class OperationContainer extends PureComponent {
       selectedMethod: method,
       selectedPath: path,
       pendingParameters: cleanParameters, // Initialize with clean params
-      pendingParameterOperations: []
+      pendingParameterOperations: [],
+      pendingResponses: cleanResponses,
+      pendingResponseOperations: []
     })
   }
 
@@ -198,7 +212,9 @@ export default class OperationContainer extends PureComponent {
       selectedMethod: null,
       selectedPath: null,
       pendingParameters: null,
-      pendingParameterOperations: []
+      pendingParameterOperations: [],
+      pendingResponses: null,
+      pendingResponseOperations: []
     })
   }
 
@@ -279,6 +295,95 @@ export default class OperationContainer extends PureComponent {
     })
   }
 
+  handleResponseAdd = ({ code, response }) => {
+    if (!code) {
+      return
+    }
+
+    this.setState(prevState => {
+      try {
+        const cleanResponse = fromJS(response)
+        const updatedResponses = (prevState.pendingResponses || Map()).set(code, cleanResponse)
+
+        return {
+          pendingResponses: updatedResponses,
+          pendingResponseOperations: [
+            ...(prevState.pendingResponseOperations || []),
+            { type: 'add', code, response: { ...response } }
+          ]
+        }
+      } catch (error) {
+        console.error('Failed to add response:', error)
+        return prevState
+      }
+    })
+  }
+
+  handleResponseUpdate = ({ code, response }, previousCode) => {
+    if (!code) {
+      return
+    }
+
+    this.setState(prevState => {
+      let responsesMap = prevState.pendingResponses || Map()
+
+      if (!Map.isMap(responsesMap)) {
+        responsesMap = Map(responsesMap)
+      }
+
+      if (previousCode && previousCode !== code) {
+        responsesMap = responsesMap.delete(previousCode)
+      }
+
+      try {
+        const cleanResponse = fromJS(response)
+        responsesMap = responsesMap.set(code, cleanResponse)
+
+        const operation = {
+          type: 'update',
+          code,
+          response: { ...response }
+        }
+
+        if (previousCode && previousCode !== code) {
+          operation.previousCode = previousCode
+        }
+
+        return {
+          pendingResponses: responsesMap,
+          pendingResponseOperations: [
+            ...(prevState.pendingResponseOperations || []),
+            operation
+          ]
+        }
+      } catch (error) {
+        console.error('Failed to update response:', error)
+        return prevState
+      }
+    })
+  }
+
+  handleResponseDelete = (code) => {
+    if (!code) {
+      return
+    }
+
+    this.setState(prevState => {
+      const responsesMap = prevState.pendingResponses || Map()
+      if (!responsesMap.has(code)) {
+        return prevState
+      }
+
+      return {
+        pendingResponses: responsesMap.delete(code),
+        pendingResponseOperations: [
+          ...(prevState.pendingResponseOperations || []),
+          { type: 'delete', code }
+        ]
+      }
+    })
+  }
+
   showValidationDialog = (errorMessage) => {
     this.setState({
       showValidationDialog: true,
@@ -333,6 +438,7 @@ export default class OperationContainer extends PureComponent {
 
     // Prepare parameter operations
     let parameterOperations = this.state.pendingParameterOperations || []
+    const responseOperations = this.state.pendingResponseOperations || []
 
     // If path changed, auto-detect path params in changed sections and add missing ones
     if (selectedPath && selectedPath !== path) {
@@ -404,7 +510,8 @@ export default class OperationContainer extends PureComponent {
       newPath: selectedPath,
       newMethod: selectedMethod,
       fieldUpdates,
-      parameterOperations
+      parameterOperations,
+      responseOperations
     })
     
     // Reset editing state
@@ -415,7 +522,9 @@ export default class OperationContainer extends PureComponent {
       selectedMethod: null,
       selectedPath: null,
       pendingParameters: null,
-      pendingParameterOperations: []
+      pendingParameterOperations: [],
+      pendingResponses: null,
+      pendingResponseOperations: []
     })
   }
 
@@ -558,6 +667,12 @@ export default class OperationContainer extends PureComponent {
         onParameterAdd={this.handleParameterAdd}
         onParameterUpdate={this.handleParameterUpdate}
         onParameterDelete={this.handleParameterDelete}
+
+        // Pass response buffering state and handlers
+        pendingResponses={this.state.pendingResponses}
+        onResponseAdd={this.handleResponseAdd}
+        onResponseUpdate={this.handleResponseUpdate}
+        onResponseDelete={this.handleResponseDelete}
       />
     )
   }
