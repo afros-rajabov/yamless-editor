@@ -13,6 +13,44 @@ import {
   extractSchemaName
 } from "core/utils/parameter-utils"
 
+const dataContentTypes = {
+  json: [
+    { value: 'application/json', label: 'JSON Data' },
+  ],
+  xml: [
+    { value: 'application/xml', label: 'XML Data' },
+    { value: 'application/soap+xml', label: 'SOAP XML' }
+  ],
+  yaml: [
+    { value: 'application/yaml', label: 'YAML Data' },
+    { value: 'application/x-yaml', label: 'YAML Structured' },
+  ],
+  text: [
+    { value: 'text/plain', label: 'Plain Text' },
+    { value: 'text/xml', label: 'XML Text' },
+    { value: 'text/yaml', label: 'YAML Text' },
+    { value: 'text/html', label: 'HTML' },
+    { value: 'text/csv', label: 'CSV' },
+    { value: 'text/css', label: 'CSS Stylesheet' },
+    { value: 'text/javascript', label: 'JavaScript' },
+    { value: 'text/markdown', label: 'Markdown' },
+  ],
+}
+
+// Helper function to determine dataType from contentType
+const getDataTypeFromContentType = (contentType) => {
+  if (!contentType) return "json"
+  
+  for (const [dataType, options] of Object.entries(dataContentTypes)) {
+    if (options.some(opt => opt.value === contentType)) {
+      return dataType
+    }
+  }
+  
+  // Default to json if no match found
+  return "json"
+}
+
 export default class ResponseEditForm extends Component {
   static propTypes = {
     initialCode: PropTypes.string,
@@ -50,6 +88,7 @@ export default class ResponseEditForm extends Component {
     let description = ""
     let contentType = "application/json"
     let schemaType = ""
+    let dataType = "json"
     
     if (response) {
       // Handle Immutable Map
@@ -144,11 +183,21 @@ export default class ResponseEditForm extends Component {
       }
     }
 
+    // Determine dataType from contentType
+    dataType = getDataTypeFromContentType(contentType)
+    
+    // If contentType doesn't match any dataType, default to json and set contentType to first json option
+    if (!dataContentTypes[dataType].some(opt => opt.value === contentType)) {
+      dataType = "json"
+      contentType = dataContentTypes.json[0].value
+    }
+
     return {
       code: initialCode || "",
       description,
       contentType,
       schemaType,
+      dataType,
       typeSearch: "",
       typeDropdownOpen: false,
       validationErrors: [],
@@ -166,6 +215,25 @@ export default class ResponseEditForm extends Component {
     this.handleInputChange("schemaType", type)
   }
 
+  handleDataTypeChange = (newDataType) => {
+    const { contentType } = this.state
+    
+    // Check if current contentType is valid for the new dataType
+    const validOptions = dataContentTypes[newDataType] || []
+    const isCurrentContentTypeValid = validOptions.some(opt => opt.value === contentType)
+    
+    // If current contentType is not valid for new dataType, reset to first option of new dataType
+    const newContentType = isCurrentContentTypeValid 
+      ? contentType 
+      : (validOptions.length > 0 ? validOptions[0].value : "application/json")
+    
+    this.setState({
+      dataType: newDataType,
+      contentType: newContentType,
+      validationErrors: [],
+    })
+  }
+
   handleReset = () => {
     this.setState(this.initializeState(this.props))
   }
@@ -177,7 +245,7 @@ export default class ResponseEditForm extends Component {
   }
 
   handleSave = () => {
-    const { code, description, contentType, schemaType } = this.state
+    const { code, description, contentType, schemaType, dataType } = this.state
     const { existingCodes, initialCode } = this.props
 
     const trimmedCode = (code || "").trim()
@@ -190,11 +258,16 @@ export default class ResponseEditForm extends Component {
       errors.push("Status code is required")
     }
 
+    if (!dataType) {
+      errors.push("Data type is required")
+    }
+
     if (!trimmedContentType) {
       errors.push("Content type is required")
     }
 
-    if (!schemaType) {
+    // Schema type is only required when dataType is not "text"
+    if (dataType !== "text" && !schemaType) {
       errors.push("Schema type is required")
     }
 
@@ -215,19 +288,23 @@ export default class ResponseEditForm extends Component {
       responsePayload.description = trimmedDescription
     }
 
-    // Build schema object
-    let schema = {}
-    if (isSchemaReference(schemaType)) {
-      schema = { $ref: schemaType }
-    } else {
-      schema = { type: schemaType }
+    // Build content object - only include schema if dataType is not "text"
+    const mediaTypeObj = {}
+    
+    if (dataType !== "text") {
+      // Build schema object
+      let schema = {}
+      if (isSchemaReference(schemaType)) {
+        schema = { $ref: schemaType }
+      } else {
+        schema = { type: schemaType }
+      }
+      mediaTypeObj.schema = schema
     }
 
     // Add content with media type
     responsePayload.content = {
-      [trimmedContentType]: {
-        schema
-      }
+      [trimmedContentType]: mediaTypeObj
     }
 
     this.props.onSave({
@@ -237,7 +314,7 @@ export default class ResponseEditForm extends Component {
   }
 
   render() {
-    const { code, description, contentType, schemaType, validationErrors, typeSearch, typeDropdownOpen } = this.state
+    const { code, description, contentType, schemaType, dataType, validationErrors, typeSearch, typeDropdownOpen } = this.state
     const { initialCode, isOperationEditMode, specSelectors } = this.props
     const isEditing = Boolean(initialCode)
 
@@ -252,13 +329,10 @@ export default class ResponseEditForm extends Component {
       label: schemaKey
     }))
 
-    const contentTypeOptions = [
-      { value: "application/json", label: "application/json" },
-      { value: "application/xml", label: "application/xml" },
-      { value: "text/plain", label: "text/plain" },
-      { value: "text/html", label: "text/html" },
-      { value: "application/octet-stream", label: "application/octet-stream" },
-    ]
+    // Filter contentTypeOptions based on selected dataType
+    const contentTypeOptions = dataType && dataContentTypes[dataType] 
+      ? dataContentTypes[dataType] 
+      : []
 
     return (
       <div className="response-edit-form">
@@ -286,40 +360,60 @@ export default class ResponseEditForm extends Component {
 
           <div className="form-field">
             <label className="form-label">
+              Data Type <span className="required">*</span>
+            </label>
+            <select
+              className="form-input"
+              value={dataType}
+              onChange={(e) => this.handleDataTypeChange(e.target.value)}
+              disabled={isEditing}
+            >
+              <option value="json">JSON</option>
+              <option value="yaml">YAML</option>
+              <option value="xml">XML</option>
+              <option value="text">Text</option>
+            </select>
+          </div>
+
+          <div className="form-field">
+            <label className="form-label">
               Content Type <span className="required">*</span>
             </label>
             <select
               className="form-input"
               value={contentType}
               onChange={(e) => this.handleInputChange("contentType", e.target.value)}
+              disabled={!dataType}
             >
               {contentTypeOptions.map(option => (
                 <option key={option.value} value={option.value}>
-                  {option.label}
+                  {option.value}
                 </option>
               ))}
             </select>
           </div>
 
-          <div className="form-field">
-            <label className="form-label">
-              Schema Type <span className="required">*</span>
-            </label>
-            <SearchableSelect
-              value={schemaType}
-              onChange={this.handleTypeChange}
-              placeholder="Select schema type..."
-              searchValue={typeSearch}
-              onSearchChange={(value) => this.setState({ typeSearch: value })}
-              isOpen={typeDropdownOpen}
-              onToggle={(open) => this.setState({ typeDropdownOpen: open })}
-              displayValue={isSchemaReference(schemaType) 
-                ? extractSchemaName(schemaType) 
-                : schemaType}
-              primitiveOptions={allPrimitiveTypeOptions}
-              options={schemaOptions}
-            />
-          </div>
+          {dataType !== "text" && (
+            <div className="form-field">
+              <label className="form-label">
+                Schema Type <span className="required">*</span>
+              </label>
+              <SearchableSelect
+                value={schemaType}
+                onChange={this.handleTypeChange}
+                placeholder="Select schema type..."
+                searchValue={typeSearch}
+                onSearchChange={(value) => this.setState({ typeSearch: value })}
+                isOpen={typeDropdownOpen}
+                onToggle={(open) => this.setState({ typeDropdownOpen: open })}
+                displayValue={isSchemaReference(schemaType) 
+                  ? extractSchemaName(schemaType) 
+                  : schemaType}
+                primitiveOptions={allPrimitiveTypeOptions}
+                options={schemaOptions}
+              />
+            </div>
+          )}
 
           <div className="form-field">
             <label className="form-label">
