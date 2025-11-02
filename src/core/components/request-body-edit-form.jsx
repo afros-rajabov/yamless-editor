@@ -13,6 +13,14 @@ import {
   extractSchemaName
 } from "core/utils/parameter-utils"
 
+    // Allowed content types
+const allowedContentTypes = [
+  "application/json", 
+  "application/xml",
+  "application/yaml",
+  "multipart/form-data"
+]
+
 export default class RequestBodyEditForm extends Component {
   static propTypes = {
     requestBody: ImPropTypes.map,
@@ -47,9 +55,7 @@ export default class RequestBodyEditForm extends Component {
     let required = false
     let contentType = "application/json"
     let schemaType = ""
-    
-    // Allowed content types
-    const allowedContentTypes = ["application/json", "multipart/form-data"]
+
     
     if (requestBody) {
       // Handle Immutable Map
@@ -247,10 +253,10 @@ export default class RequestBodyEditForm extends Component {
       label: schemaKey
     }))
 
-    const contentTypeOptions = [
-      { value: "application/json", label: "application/json" },
-      { value: "multipart/form-data", label: "multipart/form-data" },
-    ]
+    const contentTypeOptions = allowedContentTypes.map(contentType => ({
+      value: contentType,
+      label: contentType
+    }))
 
     return (
       <div className="request-body-edit-form">
