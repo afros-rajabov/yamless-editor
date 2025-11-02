@@ -345,6 +345,9 @@ const Models = ({
                       propSchema.items = { $$ref: prop.itemsType, $ref: prop.itemsType }
                     } else {
                       propSchema.items = { type: prop.itemsType }
+                      if (prop.itemsFormat) {
+                        propSchema.items.format = prop.itemsFormat
+                      }
                     }
                     propSchema.default = []
                   }
@@ -513,6 +516,9 @@ const Models = ({
                       propSchema.items = { $$ref: prop.itemsType, $ref: prop.itemsType }
                     } else {
                       propSchema.items = { type: prop.itemsType }
+                      if (prop.itemsFormat) {
+                        propSchema.items.format = prop.itemsFormat
+                      }
                     }
                     propSchema.default = []
                   }

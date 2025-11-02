@@ -235,6 +235,10 @@ export const parseSchemaToDialogFormat = (rawSchema) => {
           property.itemsType = safeExtractRef(ref)
         } else {
           property.itemsType = propSchema.items.type || "string"
+          // Extract items format if present
+          if (propSchema.items.format) {
+            property.itemsFormat = propSchema.items.format
+          }
         }
       }
       
@@ -388,6 +392,7 @@ export const getDefaultPropertyData = () => ({
   description: "",
   format: "",
   itemsType: "string",
+  itemsFormat: "",
   isComposition: false,
   compositionType: "anyOf",
   compositionSchemas: []

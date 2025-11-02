@@ -187,7 +187,8 @@ const SchemaDialog = ({
       required: currentProperty.required,
       description: currentProperty.description,
       format: currentProperty.format,
-      itemsType: currentProperty.itemsType
+      itemsType: currentProperty.itemsType,
+      itemsFormat: currentProperty.itemsFormat
     }
     
     // Add type or composition data based on property type
@@ -620,32 +621,75 @@ const SchemaDialog = ({
                     )}
                     
                     {currentProperty.type === "array" && (
-                      <div className="form-field" style={{ marginBottom: '12px' }}>
-                        <label className="form-label">Items Type <span className="required">*</span></label>
-                        <SearchableSelect
-                          value={
-                            currentProperty.itemsType
-                          }
-                          onChange={(value) => setCurrentProperty({...currentProperty, itemsType: value})}
-                          placeholder="Select items type..."
-                          searchValue={propertyItemsTypeSearch}
-                          onSearchChange={setPropertyItemsTypeSearch}
-                          isOpen={propertyItemsDropdownOpen}
-                          onToggle={setPropertyItemsDropdownOpen}
-                          displayValue={currentProperty.itemsType.includes(refPrefix) 
-                            ? safeExtractSchemaName(currentProperty.itemsType) 
-                            : currentProperty.itemsType}
-                          primitiveOptions={primitiveTypeOptions}
-                          options={filterSchemas(propertyItemsTypeSearch, schemas).map(schemaKey => ({
-                            value: `${refPrefix}${schemaKey}`,
-                            label: schemaKey
-                          }))}
-                        />
-                      </div>
+                      <>
+                        <div className="form-field" style={{ marginBottom: '12px' }}>
+                          <label className="form-label">Items Type <span className="required">*</span></label>
+                          <SearchableSelect
+                            value={
+                              currentProperty.itemsType
+                            }
+                            onChange={(value) => setCurrentProperty({...currentProperty, itemsType: value, itemsFormat: ""})}
+                            placeholder="Select items type..."
+                            searchValue={propertyItemsTypeSearch}
+                            onSearchChange={setPropertyItemsTypeSearch}
+                            isOpen={propertyItemsDropdownOpen}
+                            onToggle={setPropertyItemsDropdownOpen}
+                            displayValue={currentProperty.itemsType.includes(refPrefix) 
+                              ? safeExtractSchemaName(currentProperty.itemsType) 
+                              : currentProperty.itemsType}
+                            primitiveOptions={primitiveTypeOptions}
+                            options={filterSchemas(propertyItemsTypeSearch, schemas).map(schemaKey => ({
+                              value: `${refPrefix}${schemaKey}`,
+                              label: schemaKey
+                            }))}
+                          />
+                        </div>
+                        {currentProperty.itemsType && 
+                         !currentProperty.itemsType.includes(refPrefix) && 
+                         (currentProperty.itemsType === "string" || 
+                          currentProperty.itemsType === "number" || 
+                          currentProperty.itemsType === "integer") && (
+                          <div className="form-field" style={{ marginBottom: '12px' }}>
+                            <label className="form-label">Items Format</label>
+                            <select 
+                              className="form-input" 
+                              value={currentProperty.itemsFormat} 
+                              onChange={(e) => setCurrentProperty({...currentProperty, itemsFormat: e.target.value})}
+                            >
+                              <option value="">None</option>
+                              {currentProperty.itemsType === "string" && (
+                                <>
+                                  <option value="date">Date</option>
+                                  <option value="date-time">Date-Time</option>
+                                  <option value="email">Email</option>
+                                  <option value="uri">URI</option>
+                                  <option value="uuid">UUID</option>
+                                  <option value="password">Password</option>
+                                  <option value="hostname">Hostname</option>
+                                  <option value="ipv4">IPv4</option>
+                                  <option value="ipv6">IPv6</option>
+                                  <option value="binary">Binary</option>
+                                </>
+                              )}
+                              {(currentProperty.itemsType === "number" || currentProperty.itemsType === "integer") && (
+                                <>
+                                  <option value="int32">int32</option>
+                                  <option value="int64">int64</option>
+                                  <option value="float">Float</option>
+                                  <option value="double">Double</option>
+                                </>
+                              )}
+                            </select>
+                          </div>
+                        )}
+                      </>
                     )}
                     
                     <div style={{ display: 'flex', gap: '15px', marginBottom: '12px' }}>
-                      {!currentProperty.isComposition && (
+                      {!currentProperty.isComposition && 
+                       (currentProperty.type === "string" || 
+                        currentProperty.type === "number" || 
+                        currentProperty.type === "integer") && (
                         <div className="form-field" style={{ flex: 1 }}>
                           <label className="form-label">Format</label>
                           <select 
