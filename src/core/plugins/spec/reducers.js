@@ -509,6 +509,7 @@ export default {
       fieldUpdates = {}, 
       parameterOperations = [],
       responseOperations = [],
+      requestBodyOperations = [],
     } = payload
 
     let newState = state
@@ -768,6 +769,62 @@ export default {
           })
 
           newState = newState.setIn(["resolvedSubtrees", "paths", finalPath, finalMethod, "responses"], subtreeResponses)
+        }
+      }
+    }
+
+    // Apply request body operations
+    if (requestBodyOperations.length > 0) {
+      const operationData = newState.getIn(["json", "paths", finalPath, finalMethod])
+      if (operationData) {
+        requestBodyOperations.forEach(op => {
+          switch (op.type) {
+            case "add":
+              newState = newState.setIn(["json", "paths", finalPath, finalMethod, "requestBody"], fromJS(op.requestBody))
+              break
+            case "update":
+              newState = newState.setIn(["json", "paths", finalPath, finalMethod, "requestBody"], fromJS(op.requestBody))
+              break
+            case "delete":
+              newState = newState.deleteIn(["json", "paths", finalPath, finalMethod, "requestBody"])
+              break
+          }
+        })
+
+        // Update resolved data if it exists
+        const resolvedData = newState.getIn(["resolved", "paths", finalPath, finalMethod])
+        if (resolvedData) {
+          requestBodyOperations.forEach(op => {
+            switch (op.type) {
+              case "add":
+                newState = newState.setIn(["resolved", "paths", finalPath, finalMethod, "requestBody"], fromJS(op.requestBody))
+                break
+              case "update":
+                newState = newState.setIn(["resolved", "paths", finalPath, finalMethod, "requestBody"], fromJS(op.requestBody))
+                break
+              case "delete":
+                newState = newState.deleteIn(["resolved", "paths", finalPath, finalMethod, "requestBody"])
+                break
+            }
+          })
+        }
+
+        // Update resolvedSubtrees cache
+        const currentResolvedSubtree = newState.getIn(["resolvedSubtrees", "paths", finalPath, finalMethod])
+        if (currentResolvedSubtree) {
+          requestBodyOperations.forEach(op => {
+            switch (op.type) {
+              case "add":
+                newState = newState.setIn(["resolvedSubtrees", "paths", finalPath, finalMethod, "requestBody"], fromJS(op.requestBody))
+                break
+              case "update":
+                newState = newState.setIn(["resolvedSubtrees", "paths", finalPath, finalMethod, "requestBody"], fromJS(op.requestBody))
+                break
+              case "delete":
+                newState = newState.deleteIn(["resolvedSubtrees", "paths", finalPath, finalMethod, "requestBody"])
+                break
+            }
+          })
         }
       }
     }

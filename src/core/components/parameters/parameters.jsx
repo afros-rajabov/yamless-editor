@@ -41,6 +41,12 @@ export default class Parameters extends Component {
     onParameterAdd: PropTypes.func,
     onParameterUpdate: PropTypes.func,
     onParameterDelete: PropTypes.func,
+
+    // Request body buffering props
+    pendingRequestBody: ImPropTypes.map,
+    onRequestBodyAdd: PropTypes.func,
+    onRequestBodyUpdate: PropTypes.func,
+    onRequestBodyDelete: PropTypes.func,
   }
 
 
@@ -58,6 +64,12 @@ export default class Parameters extends Component {
     onParameterAdd: Function.prototype,
     onParameterUpdate: Function.prototype,
     onParameterDelete: Function.prototype,
+
+    // Request body buffering defaults
+    pendingRequestBody: null,
+    onRequestBodyAdd: Function.prototype,
+    onRequestBodyUpdate: Function.prototype,
+    onRequestBodyDelete: Function.prototype,
   }
 
   onChange = (param, value, isXml) => {
@@ -92,21 +104,6 @@ export default class Parameters extends Component {
     }
   }
   
-  onChangeMediaType = ({ value, pathMethod }) => {
-    let { specActions, oas3Selectors, oas3Actions } = this.props
-    const userHasEditedBody = oas3Selectors.hasUserEditedBody(...pathMethod)
-    const shouldRetainRequestBodyValue = oas3Selectors.shouldRetainRequestBodyValue(...pathMethod)
-    oas3Actions.setRequestContentType({ value, pathMethod })
-    oas3Actions.initRequestBodyValidateError({ pathMethod })
-    if (!userHasEditedBody) {
-      if(!shouldRetainRequestBodyValue) {
-        oas3Actions.setRequestBodyValue({ value: undefined, pathMethod })
-      }
-      specActions.clearResponse(...pathMethod)
-      specActions.clearRequest(...pathMethod)
-      specActions.clearValidateParams(pathMethod)
-    }
-  }
 
   handleParameterClick = (parameter) => {
     this.setState({ selectedParameter: parameter })
@@ -183,22 +180,20 @@ export default class Parameters extends Component {
       operation,
       isEditing,
       pendingParameters,
+      pendingRequestBody,
+      onRequestBodyAdd,
+      onRequestBodyUpdate,
+      onRequestBodyDelete,
     } = this.props
 
     const ParameterRow = getComponent("parameterRow")
     const ParameterEditDialog = getComponent("parameterEditDialog", false, { failSilently: true })
+    const RequestBodySection = getComponent("requestBodySection", true)
     const TryItOutButton = getComponent("TryItOutButton")
-    const ContentType = getComponent("contentType")
     const Callbacks = getComponent("Callbacks", true)
-    const RequestBody = getComponent("RequestBody", true)
 
     const isExecute = tryItOutEnabled && allowTryItOut
     const isOAS3 = specSelectors.isOAS3()
-
-    const regionId = createHtmlReadyId(`${pathMethod[1]}${pathMethod[0]}_requests`)
-    const controlId = `${regionId}_select`
-
-    const requestBody = operation.get("requestBody")
 
     // Use buffered parameters when in edit mode, otherwise use regular parameters
     const displayParameters = pendingParameters || parameters
@@ -214,7 +209,6 @@ export default class Parameters extends Component {
       }, {}))
       .reduce((acc, x) => acc.concat(x), [])
 
-    const retainRequestBodyValueFlagForOperation = (f) => oas3Actions.setRetainRequestBodyValueFlag({ value: f, pathMethod })
     return (
       <div className="opblock-section">
         <div className="opblock-section-header">
@@ -320,72 +314,26 @@ export default class Parameters extends Component {
             specPath={specPath.slice(0, -1).push("callbacks")}
           />
         </div> : null}
-        {
-          isOAS3 && requestBody && this.state.parametersVisible &&
-          <div className="opblock-section opblock-section-request-body">
-            <div className="opblock-section-header">
-              <h4 className={`opblock-title parameter__name ${requestBody.get("required") && "required"}`}>Request
-                body</h4>
-              <label id={controlId}>
-                <ContentType
-                  value={oas3Selectors.requestContentType(...pathMethod)}
-                  contentTypes={requestBody.get("content", List()).keySeq()}
-                  onChange={(value) => {
-                    this.onChangeMediaType({ value, pathMethod })
-                  }}
-                  className="body-param-content-type"
-                  ariaLabel="Request content type" 
-                  controlId={controlId}
-                />
-              </label>
-            </div>
-            <div className="opblock-description-wrapper">
-              <RequestBody
-                setRetainRequestBodyValueFlag={retainRequestBodyValueFlagForOperation}
-                userHasEditedBody={oas3Selectors.hasUserEditedBody(...pathMethod)}
-                specPath={specPath.slice(0, -1).push("requestBody")}
-                requestBody={requestBody}
-                requestBodyValue={oas3Selectors.requestBodyValue(...pathMethod)}
-                requestBodyInclusionSetting={oas3Selectors.requestBodyInclusionSetting(...pathMethod)}
-                requestBodyErrors={oas3Selectors.requestBodyErrors(...pathMethod)}
-                isExecute={isExecute}
-                getConfigs={getConfigs}
-                activeExamplesKey={oas3Selectors.activeExamplesMember(
-                  ...pathMethod,
-                  "requestBody",
-                  "requestBody", // RBs are currently not stored per-mediaType
-                )}
-                updateActiveExamplesKey={key => {
-                  this.props.oas3Actions.setActiveExamplesMember({
-                    name: key,
-                    pathMethod: this.props.pathMethod,
-                    contextType: "requestBody",
-                    contextName: "requestBody", // RBs are currently not stored per-mediaType
-                  })
-                }
-                }
-                onChange={(value, path) => {
-                  if (path) {
-                    const lastValue = oas3Selectors.requestBodyValue(...pathMethod)
-                    const usableValue = Map.isMap(lastValue) ? lastValue : Map()
-                    return oas3Actions.setRequestBodyValue({
-                      pathMethod,
-                      value: usableValue.setIn(path, value),
-                    })
-                  }
-                  oas3Actions.setRequestBodyValue({ value, pathMethod })
-                }}
-                onChangeIncludeEmpty={(name, value) => {
-                  oas3Actions.setRequestBodyInclusion({
-                    pathMethod,
-                    value,
-                    name,
-                  })
-                }}
-                contentType={oas3Selectors.requestContentType(...pathMethod)} />
-            </div>
-          </div>
-        }
+        {isOAS3 && this.state.parametersVisible && RequestBodySection ? (
+          <RequestBodySection
+            requestBody={operation.get("requestBody")}
+            specPath={specPath}
+            pathMethod={pathMethod}
+            specSelectors={specSelectors}
+            specActions={specActions}
+            oas3Actions={oas3Actions}
+            oas3Selectors={oas3Selectors}
+            getComponent={getComponent}
+            getConfigs={getConfigs}
+            fn={fn}
+            isExecute={isExecute}
+            isEditing={isEditing}
+            pendingRequestBody={pendingRequestBody}
+            onRequestBodyAdd={onRequestBodyAdd}
+            onRequestBodyUpdate={onRequestBodyUpdate}
+            onRequestBodyDelete={onRequestBodyDelete}
+          />
+        ) : null}
       </div>
     )
   }

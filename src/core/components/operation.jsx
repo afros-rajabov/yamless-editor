@@ -143,7 +143,7 @@ export default class Operation extends PureComponent {
     } = op
 
     // Get editing state from props
-    const { isEditing, selectedSummary, selectedDescription, selectedMethod, selectedPath, onSummaryChange, onDescriptionChange, onMethodChange, onPathChange, onSaveClick, onCancelEdit, showValidationDialog, validationError, onCloseValidationDialog, pendingParameters, onParameterAdd, onParameterUpdate, onParameterDelete, pendingResponses, onResponseAdd, onResponseUpdate, onResponseDelete } = this.props
+    const { isEditing, selectedSummary, selectedDescription, selectedMethod, selectedPath, onSummaryChange, onDescriptionChange, onMethodChange, onPathChange, onSaveClick, onCancelEdit, showValidationDialog, validationError, onCloseValidationDialog, pendingParameters, onParameterAdd, onParameterUpdate, onParameterDelete, pendingResponses, onResponseAdd, onResponseUpdate, onResponseDelete, pendingRequestBody, onRequestBodyAdd, onRequestBodyUpdate, onRequestBodyDelete } = this.props
     
 
     const externalDocsUrl = externalDocs ? safeBuildUrl(externalDocs.url, specSelectors.url(), { selectedServer: oas3Selectors.selectedServer() }) : ""
@@ -272,6 +272,12 @@ export default class Operation extends PureComponent {
                   onParameterAdd={onParameterAdd}
                   onParameterUpdate={onParameterUpdate}
                   onParameterDelete={onParameterDelete}
+
+                  // Request body buffering props
+                  pendingRequestBody={pendingRequestBody}
+                  onRequestBodyAdd={onRequestBodyAdd}
+                  onRequestBodyUpdate={onRequestBodyUpdate}
+                  onRequestBodyDelete={onRequestBodyDelete}
                 />
               }
 

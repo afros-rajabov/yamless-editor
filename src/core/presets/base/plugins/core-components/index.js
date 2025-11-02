@@ -39,6 +39,9 @@ import ParameterIncludeEmpty from "core/components/parameter-include-empty"
 import ParameterRow from "core/components/parameter-row"
 import ParameterEditForm from "core/components/parameter-edit-form"
 import ParameterEditDialog from "core/components/parameter-edit-dialog"
+import RequestBodyEditForm from "core/components/request-body-edit-form"
+import RequestBodyEditDialog from "core/components/request-body-edit-dialog"
+import RequestBodySection from "core/components/request-body-section"
 import Execute from "core/components/execute"
 import Headers from "core/components/headers"
 import Errors from "core/components/errors"
@@ -106,6 +109,9 @@ const CoreComponentsPlugin = () => ({
     parameterRow: ParameterRow,
     parameterEditForm: ParameterEditForm,
     parameterEditDialog: ParameterEditDialog,
+    requestBodyEditForm: RequestBodyEditForm,
+    requestBodyEditDialog: RequestBodyEditDialog,
+    requestBodySection: RequestBodySection,
     execute: Execute,
     headers: Headers,
     errors: Errors,

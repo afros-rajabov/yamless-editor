@@ -24,7 +24,9 @@ export default class OperationContainer extends PureComponent {
       pendingParameters: null,
       pendingParameterOperations: [],
       pendingResponses: null,
-      pendingResponseOperations: []
+      pendingResponseOperations: [],
+      pendingRequestBody: null,
+      pendingRequestBodyOperations: []
     }
   }
 
@@ -170,6 +172,7 @@ export default class OperationContainer extends PureComponent {
     const description = resolvedSubtree.get("description") || ''
     const parameters = resolvedSubtree.get("parameters", List())
     const responses = resolvedSubtree.get("responses", Map())
+    const requestBody = resolvedSubtree.get("requestBody")
     
     // Create clean copies of parameters to avoid circular references
     const cleanParameters = parameters.map(param => {
@@ -190,6 +193,16 @@ export default class OperationContainer extends PureComponent {
         return response
       }
     })
+
+    let cleanRequestBody = null
+    if (requestBody) {
+      try {
+        cleanRequestBody = fromJS(requestBody.toJS ? requestBody.toJS() : requestBody)
+      } catch (error) {
+        console.warn('Failed to clean request body, using original:', error)
+        cleanRequestBody = requestBody
+      }
+    }
     
     this.setState({
       isEditing: true,
@@ -200,7 +213,9 @@ export default class OperationContainer extends PureComponent {
       pendingParameters: cleanParameters, // Initialize with clean params
       pendingParameterOperations: [],
       pendingResponses: cleanResponses,
-      pendingResponseOperations: []
+      pendingResponseOperations: [],
+      pendingRequestBody: cleanRequestBody,
+      pendingRequestBodyOperations: []
     })
   }
 
@@ -214,7 +229,9 @@ export default class OperationContainer extends PureComponent {
       pendingParameters: null,
       pendingParameterOperations: [],
       pendingResponses: null,
-      pendingResponseOperations: []
+      pendingResponseOperations: [],
+      pendingRequestBody: null,
+      pendingRequestBodyOperations: []
     })
   }
 
@@ -384,6 +401,56 @@ export default class OperationContainer extends PureComponent {
     })
   }
 
+  handleRequestBodyAdd = (requestBody) => {
+    this.setState(prevState => {
+      try {
+        // Create a clean, serializable copy of the request body
+        const cleanRequestBody = fromJS(requestBody)
+        return {
+          pendingRequestBody: cleanRequestBody,
+          pendingRequestBodyOperations: [
+            ...prevState.pendingRequestBodyOperations,
+            { type: 'add', requestBody: { ...requestBody } }
+          ]
+        }
+      } catch (error) {
+        console.error('Failed to add request body:', error)
+        return prevState
+      }
+    })
+  }
+
+  handleRequestBodyUpdate = (requestBody) => {
+    this.setState(prevState => {
+      try {
+        // Create a clean, serializable copy of the request body
+        const cleanRequestBody = fromJS(requestBody)
+        return {
+          pendingRequestBody: cleanRequestBody,
+          pendingRequestBodyOperations: [
+            ...prevState.pendingRequestBodyOperations,
+            { type: 'update', requestBody: { ...requestBody } }
+          ]
+        }
+      } catch (error) {
+        console.error('Failed to update request body:', error)
+        return prevState
+      }
+    })
+  }
+
+  handleRequestBodyDelete = () => {
+    this.setState(prevState => {
+      return {
+        pendingRequestBody: null,
+        pendingRequestBodyOperations: [
+          ...prevState.pendingRequestBodyOperations,
+          { type: 'delete' }
+        ]
+      }
+    })
+  }
+
   showValidationDialog = (errorMessage) => {
     this.setState({
       showValidationDialog: true,
@@ -439,6 +506,7 @@ export default class OperationContainer extends PureComponent {
     // Prepare parameter operations
     let parameterOperations = this.state.pendingParameterOperations || []
     const responseOperations = this.state.pendingResponseOperations || []
+    const requestBodyOperations = this.state.pendingRequestBodyOperations || []
 
     // If path changed, auto-detect path params in changed sections and add missing ones
     if (selectedPath && selectedPath !== path) {
@@ -511,7 +579,8 @@ export default class OperationContainer extends PureComponent {
       newMethod: selectedMethod,
       fieldUpdates,
       parameterOperations,
-      responseOperations
+      responseOperations,
+      requestBodyOperations
     })
     
     // Reset editing state
@@ -524,7 +593,9 @@ export default class OperationContainer extends PureComponent {
       pendingParameters: null,
       pendingParameterOperations: [],
       pendingResponses: null,
-      pendingResponseOperations: []
+      pendingResponseOperations: [],
+      pendingRequestBody: null,
+      pendingRequestBodyOperations: []
     })
   }
 
@@ -673,6 +744,12 @@ export default class OperationContainer extends PureComponent {
         onResponseAdd={this.handleResponseAdd}
         onResponseUpdate={this.handleResponseUpdate}
         onResponseDelete={this.handleResponseDelete}
+
+        // Pass request body buffering state and handlers
+        pendingRequestBody={this.state.pendingRequestBody}
+        onRequestBodyAdd={this.handleRequestBodyAdd}
+        onRequestBodyUpdate={this.handleRequestBodyUpdate}
+        onRequestBodyDelete={this.handleRequestBodyDelete}
       />
     )
   }
