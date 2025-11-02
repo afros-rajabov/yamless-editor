@@ -5,6 +5,7 @@ import cx from "classnames"
 import { fromJS, Seq, Iterable, List, Map } from "immutable"
 import { getExtensions, fromJSOrdered, stringify } from "core/utils"
 import { getKnownSyntaxHighlighterLanguage } from "core/utils/jsonParse"
+import { deepResolveSchema } from "core/utils/parameter-utils"
 
 
 const getExampleComponent = ( sampleResponse, HighlightCode ) => {
@@ -144,32 +145,12 @@ export default class Response extends React.Component {
       oas3SchemaForContentType = activeMediaType.get("schema")
       
       // Resolve schema reference if it's a $ref in edit mode (for staged responses)
-      // This ensures staged responses with schema references render correctly
+      // This ensures staged responses with schema references render correctly with deep resolution
       if (isEditing && oas3SchemaForContentType) {
-        // Handle both Immutable Map and plain object schemas
-        const schemaObj = oas3SchemaForContentType.toJS ? oas3SchemaForContentType.toJS() : oas3SchemaForContentType
-        const schemaRef = schemaObj?.$ref
-        
-        if (schemaRef) {
-          const resolved = resolveRef(schemaRef)
-          if (resolved) {
-            // Use resolved schema for display while preserving original structure
-            const resolvedJS = resolved.toJS ? resolved.toJS() : resolved
-            // Create a merged schema with resolved content but preserve $ref and $$ref for XML generator compatibility
-            oas3SchemaForContentType = fromJS({
-              ...resolvedJS,
-              $ref: schemaRef,
-              $$ref: schemaRef
-            })
-          } else {
-            // If resolution fails, ensure $ref and $$ref are still preserved
-            // Convert to plain object and back to ensure structure is correct
-            oas3SchemaForContentType = fromJS({
-              ...schemaObj,
-              $ref: schemaRef,
-              $$ref: schemaRef
-            })
-          }
+        // Use deep resolution to resolve all nested $ref references
+        const deeplyResolved = deepResolveSchema(oas3SchemaForContentType, resolveRef)
+        if (deeplyResolved) {
+          oas3SchemaForContentType = fromJS(deeplyResolved)
         }
       }
 

@@ -9,6 +9,7 @@ import { Map, List, fromJS } from "immutable"
 import { stringify } from "core/utils"
 import { getKnownSyntaxHighlighterLanguage } from "core/utils/jsonParse"
 import createHtmlReadyId from "core/utils/create-html-ready-id"
+import { deepResolveSchema } from "core/utils/parameter-utils"
 
 export default class RequestBodySection extends Component {
   static propTypes = {
@@ -283,34 +284,11 @@ export default class RequestBodySection extends Component {
                   return null
                 }
                 
-                // Resolve schema reference if it's a $ref
+                // Resolve schema reference with deep resolution (recursively resolves all nested $ref references)
                 let displaySchema = schema
-                const schemaRef = schema && schema.get && schema.get("$ref")
-                if (schemaRef) {
-                  const resolved = resolveRef(schemaRef)
-                  if (resolved) {
-                    // Merge resolved schema content with preserved $ref and $$ref for XML generator compatibility
-                    const resolvedJS = resolved.toJS ? resolved.toJS() : resolved
-                    displaySchema = fromJS({
-                      ...resolvedJS,
-                      $ref: schemaRef,
-                      $$ref: schemaRef
-                    })
-                  }
-                } else if (schema && schema.get && schema.get("items") && schema.getIn(["items", "$ref"])) {
-                  // Handle array items with $ref
-                  const itemsRef = schema.getIn(["items", "$ref"])
-                  const resolvedItems = resolveRef(itemsRef)
-                  if (resolvedItems) {
-                    // Merge resolved items with preserved $ref and $$ref
-                    const resolvedItemsJS = resolvedItems.toJS ? resolvedItems.toJS() : resolvedItems
-                    const mergedItems = fromJS({
-                      ...resolvedItemsJS,
-                      $ref: itemsRef,
-                      $$ref: itemsRef
-                    })
-                    displaySchema = schema.set("items", mergedItems)
-                  }
+                const deeplyResolved = deepResolveSchema(schema, resolveRef)
+                if (deeplyResolved) {
+                  displaySchema = fromJS(deeplyResolved)
                 }
                 
                 // Get sample value using resolved schema

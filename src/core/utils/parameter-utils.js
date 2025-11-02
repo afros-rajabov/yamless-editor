@@ -217,3 +217,103 @@ export function extractSchemaName(ref) {
   }
   return ref
 }
+
+/**
+ * Deep resolve schema - recursively resolves all nested $ref references
+ * @param {Object|Map} schemaObj - Schema object (Immutable Map or plain object)
+ * @param {Function} resolveRef - Function to resolve a $ref reference
+ * @param {Set} visitedRefs - Set of already visited references to prevent circular loops
+ * @returns {Object} Fully resolved schema with references preserved for XML generation
+ */
+export function deepResolveSchema(schemaObj, resolveRef, visitedRefs = new Set()) {
+  if (!schemaObj || !resolveRef) return schemaObj
+  
+  // Convert to JS if needed
+  const schema = schemaObj.toJS ? schemaObj.toJS() : schemaObj
+  if (!schema || typeof schema !== 'object') return schema
+  
+  // Check for top-level $ref
+  const schemaRef = schema.$ref || schema.$$ref
+  if (schemaRef) {
+    // Prevent circular references
+    if (visitedRefs.has(schemaRef)) {
+      // Return schema with $ref preserved for circular reference
+      return { ...schema, $ref: schemaRef, $$ref: schemaRef }
+    }
+    
+    visitedRefs.add(schemaRef)
+    const resolved = resolveRef(schemaRef)
+    
+    if (resolved) {
+      const resolvedJS = resolved.toJS ? resolved.toJS() : resolved
+      // Recursively resolve the resolved schema
+      const deeplyResolved = deepResolveSchema(fromJS(resolvedJS), resolveRef, visitedRefs)
+      const deeplyResolvedJS = deeplyResolved.toJS ? deeplyResolved.toJS() : deeplyResolved
+      
+      // Merge with preserved $ref and $$ref
+      return {
+        ...deeplyResolvedJS,
+        $ref: schemaRef,
+        $$ref: schemaRef
+      }
+    }
+    
+    visitedRefs.delete(schemaRef)
+  }
+  
+  // Create a new object to avoid mutating the original
+  const result = { ...schema }
+  
+  // Resolve properties
+  if (schema.properties && typeof schema.properties === 'object') {
+    result.properties = {}
+    for (const [propName, propSchema] of Object.entries(schema.properties)) {
+      if (propSchema && typeof propSchema === 'object') {
+        result.properties[propName] = deepResolveSchema(propSchema, resolveRef, visitedRefs)
+      } else {
+        result.properties[propName] = propSchema
+      }
+    }
+  }
+  
+  // Resolve items (for arrays)
+  if (schema.items && typeof schema.items === 'object') {
+    result.items = deepResolveSchema(schema.items, resolveRef, visitedRefs)
+  }
+  
+  // Resolve allOf, oneOf, anyOf (composition schemas)
+  const compositionKeys = ['allOf', 'oneOf', 'anyOf']
+  for (const key of compositionKeys) {
+    if (schema[key] && Array.isArray(schema[key])) {
+      result[key] = schema[key].map(subSchema => {
+        if (subSchema && typeof subSchema === 'object') {
+          return deepResolveSchema(subSchema, resolveRef, visitedRefs)
+        }
+        return subSchema
+      })
+    }
+  }
+  
+  // Resolve additionalProperties
+  if (schema.additionalProperties !== undefined) {
+    if (schema.additionalProperties && typeof schema.additionalProperties === 'object') {
+      result.additionalProperties = deepResolveSchema(schema.additionalProperties, resolveRef, visitedRefs)
+    } else {
+      result.additionalProperties = schema.additionalProperties
+    }
+  }
+  
+  // Resolve patternProperties
+  if (schema.patternProperties && typeof schema.patternProperties === 'object') {
+    result.patternProperties = {}
+    for (const [pattern, patternSchema] of Object.entries(schema.patternProperties)) {
+      if (patternSchema && typeof patternSchema === 'object') {
+        result.patternProperties[pattern] = deepResolveSchema(patternSchema, resolveRef, visitedRefs)
+      } else {
+        result.patternProperties[pattern] = patternSchema
+      }
+    }
+  }
+  
+  return result
+}
