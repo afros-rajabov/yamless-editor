@@ -247,7 +247,7 @@ export default class OperationSummary extends PureComponent {
           )
         )}
         {
-          allowAnonymous ? null :
+          allowAnonymous || isEditing ? null :
             <AuthorizeOperationBtn
               isAuthorized={isAuthorized}
               onClick={() => {
