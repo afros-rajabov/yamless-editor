@@ -39,12 +39,14 @@ const SchemaDialog = ({
   const [itemsTypeSearch, setItemsTypeSearch] = useState("")
   const [compositionSchemaSearch, setCompositionSchemaSearch] = useState("")
   const [propertyItemsTypeSearch, setPropertyItemsTypeSearch] = useState("")
+  const [contentSchemaSearch, setContentSchemaSearch] = useState("")
   
   // Dropdown open states
   const [propertyDropdownOpen, setPropertyDropdownOpen] = useState(false)
   const [itemsDropdownOpen, setItemsDropdownOpen] = useState(false)
   const [compositionDropdownOpen, setCompositionDropdownOpen] = useState(false)
   const [propertyItemsDropdownOpen, setPropertyItemsDropdownOpen] = useState(false)
+  const [contentSchemaDropdownOpen, setContentSchemaDropdownOpen] = useState(false)
   
   
   
@@ -91,10 +93,12 @@ const SchemaDialog = ({
     setItemsTypeSearch("")
     setCompositionSchemaSearch("")
     setPropertyItemsTypeSearch("")
+    setContentSchemaSearch("")
     setPropertyDropdownOpen(false)
     setItemsDropdownOpen(false)
     setCompositionDropdownOpen(false)
     setPropertyItemsDropdownOpen(false)
+    setContentSchemaDropdownOpen(false)
   }, [])
 
   const closeDialog = useCallback(() => {
@@ -188,7 +192,9 @@ const SchemaDialog = ({
       description: currentProperty.description,
       format: currentProperty.format,
       itemsType: currentProperty.itemsType,
-      itemsFormat: currentProperty.itemsFormat
+      itemsFormat: currentProperty.itemsFormat,
+      contentMediaType: currentProperty.contentMediaType,
+      contentSchema: currentProperty.contentSchema
     }
     
     // Add type or composition data based on property type
@@ -685,11 +691,77 @@ const SchemaDialog = ({
                       </>
                     )}
                     
+                    {/* Content Media Type and Schema (only for string type) */}
+                    {currentProperty.type === "string" && (
+                      <div style={{ display: 'flex', gap: '15px', marginBottom: '12px' }}>
+                        <div className="form-field" style={{ flex: 1 }}>
+                          <label className="form-label">Content Media Type</label>
+                          <select 
+                            className="form-input" 
+                            value={currentProperty.contentMediaType} 
+                            onChange={(e) => setCurrentProperty({
+                              ...currentProperty, 
+                              contentMediaType: e.target.value,
+                              format: "" // Clear format when contentMediaType is set
+                            })}
+                          >
+                            <option value="">None</option>
+                            <option value="application/json">application/json</option>
+                            <option value="application/xml">application/xml</option>
+                            <option value="application/octet-stream">application/octet-stream</option>
+                            <option value="text/plain">text/plain</option>
+                            <option value="text/html">text/html</option>
+                            <option value="text/css">text/css</option>
+                            <option value="text/javascript">text/javascript</option>
+                            <option value="image/png">image/png</option>
+                            <option value="image/jpeg">image/jpeg</option>
+                            <option value="image/gif">image/gif</option>
+                            <option value="image/svg+xml">image/svg+xml</option>
+                            <option value="image/webp">image/webp</option>
+                            <option value="multipart/form-data">multipart/form-data</option>
+                            <option value="application/x-www-form-urlencoded">application/x-www-form-urlencoded</option>
+                            <option value="application/pdf">application/pdf</option>
+                            <option value="application/zip">application/zip</option>
+                            <option value="audio/mpeg">audio/mpeg</option>
+                            <option value="audio/wav">audio/wav</option>
+                            <option value="video/mp4">video/mp4</option>
+                            <option value="video/quicktime">video/quicktime</option>
+                          </select>
+                        </div>
+                        <div className="form-field" style={{ flex: 1 }}>
+                          <label className="form-label">Content Schema</label>
+                          <SearchableSelect
+                            value={currentProperty.contentSchema}
+                            onChange={(value) => setCurrentProperty({
+                              ...currentProperty, 
+                              contentSchema: value,
+                              format: "" // Clear format when contentSchema is set
+                            })}
+                            placeholder="Select content schema..."
+                            searchValue={contentSchemaSearch}
+                            onSearchChange={setContentSchemaSearch}
+                            isOpen={contentSchemaDropdownOpen}
+                            onToggle={setContentSchemaDropdownOpen}
+                            displayValue={currentProperty.contentSchema && currentProperty.contentSchema.includes(refPrefix) 
+                              ? safeExtractSchemaName(currentProperty.contentSchema) 
+                              : currentProperty.contentSchema || ""}
+                            primitiveOptions={emptyPrimitiveOptions}
+                            options={filterSchemas(contentSchemaSearch, schemas).map(schemaKey => ({
+                              value: `${refPrefix}${schemaKey}`,
+                              label: schemaKey
+                            }))}
+                          />
+                        </div>
+                      </div>
+                    )}
+                    
                     <div style={{ display: 'flex', gap: '15px', marginBottom: '12px' }}>
                       {!currentProperty.isComposition && 
                        (currentProperty.type === "string" || 
                         currentProperty.type === "number" || 
-                        currentProperty.type === "integer") && (
+                        currentProperty.type === "integer") &&
+                       !currentProperty.contentMediaType &&
+                       !currentProperty.contentSchema && (
                         <div className="form-field" style={{ flex: 1 }}>
                           <label className="form-label">Format</label>
                           <select 

@@ -356,6 +356,18 @@ const Models = ({
                 if (prop.format) propSchema.format = prop.format
                 if (prop.description) propSchema.description = prop.description
                 
+                // Handle contentMediaType and contentSchema for string properties
+                if (prop.type === "string") {
+                  if (prop.contentMediaType) {
+                    propSchema.contentMediaType = prop.contentMediaType
+                  }
+                  if (prop.contentSchema) {
+                    if (prop.contentSchema.startsWith("#/components/schemas/")) {
+                      propSchema.contentSchema = { $ref: prop.contentSchema }
+                    }
+                  }
+                }
+                
                 schema.properties[prop.name] = propSchema
                 
                 if (prop.required) {
@@ -526,6 +538,18 @@ const Models = ({
                 
                 if (prop.format) propSchema.format = prop.format
                 if (prop.description) propSchema.description = prop.description
+                
+                // Handle contentMediaType and contentSchema for string properties
+                if (prop.type === "string") {
+                  if (prop.contentMediaType) {
+                    propSchema.contentMediaType = prop.contentMediaType
+                  }
+                  if (prop.contentSchema) {
+                    if (prop.contentSchema.startsWith("#/components/schemas/")) {
+                      propSchema.contentSchema = { $ref: prop.contentSchema }
+                    }
+                  }
+                }
                 
                 schema.properties[prop.name] = propSchema
                 

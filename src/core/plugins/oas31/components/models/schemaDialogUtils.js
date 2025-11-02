@@ -242,6 +242,19 @@ export const parseSchemaToDialogFormat = (rawSchema) => {
         }
       }
       
+      // Handle contentMediaType and contentSchema for string properties
+      if (propSchema.type === "string") {
+        if (propSchema.contentMediaType) {
+          property.contentMediaType = propSchema.contentMediaType
+        }
+        if (propSchema.contentSchema) {
+          const ref = propSchema.contentSchema.$ref || propSchema.contentSchema.$$ref
+          if (ref) {
+            property.contentSchema = safeExtractRef(ref)
+          }
+        }
+      }
+      
       return property
     })
   }
@@ -393,6 +406,8 @@ export const getDefaultPropertyData = () => ({
   format: "",
   itemsType: "string",
   itemsFormat: "",
+  contentMediaType: "",
+  contentSchema: "",
   isComposition: false,
   compositionType: "anyOf",
   compositionSchemas: []
