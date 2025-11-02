@@ -5,6 +5,7 @@ import ImPropTypes from "react-immutable-proptypes"
 import win from "core/window"
 import { getExtensions, getCommonExtensions, numberToString, stringify, isEmptyValue } from "core/utils"
 import getParameterSchema from "core/utils/get-parameter-schema.js"
+import { deepResolveSchema } from "core/utils/parameter-utils"
 
 export default class ParameterRow extends Component {
   static propTypes = {
@@ -273,18 +274,27 @@ export default class ParameterRow extends Component {
       return null
     }
 
+    // Resolve schema reference with deep resolution (recursively resolves all nested $ref references)
     let displaySchema = schema
-    const schemaRef = schema && schema.get && schema.get("$ref")
-    if (schemaRef) {
-      const resolved = resolveRef(schemaRef)
-      if (resolved) {
-        displaySchema = resolved
+    if (isEditing) {
+      const deeplyResolved = deepResolveSchema(schema, resolveRef)
+      if (deeplyResolved) {
+        displaySchema = fromJS(deeplyResolved)
       }
-    } else if (schema && schema.get && schema.get("items") && schema.getIn(["items", "$ref"])) {
-      const itemsRef = schema.getIn(["items", "$ref"]) 
-      const resolvedItems = resolveRef(itemsRef)
-      if (resolvedItems) {
-        displaySchema = schema.set("items", resolvedItems)
+    } else {
+      // For non-edit mode, use simple resolution for backwards compatibility
+      const schemaRef = schema && schema.get && schema.get("$ref")
+      if (schemaRef) {
+        const resolved = resolveRef(schemaRef)
+        if (resolved) {
+          displaySchema = resolved
+        }
+      } else if (schema && schema.get && schema.get("items") && schema.getIn(["items", "$ref"])) {
+        const itemsRef = schema.getIn(["items", "$ref"]) 
+        const resolvedItems = resolveRef(itemsRef)
+        if (resolvedItems) {
+          displaySchema = schema.set("items", resolvedItems)
+        }
       }
     }
 
