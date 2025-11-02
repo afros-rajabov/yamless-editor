@@ -665,6 +665,7 @@ const SchemaDialog = ({
                                 <option value="hostname">Hostname</option>
                                 <option value="ipv4">IPv4</option>
                                 <option value="ipv6">IPv6</option>
+                                <option value="binary">Binary</option>
                               </>
                             )}
                             {(currentProperty.type === "number" || currentProperty.type === "integer") && (
