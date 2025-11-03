@@ -9,6 +9,8 @@ import CopyIcon from "./components/copy"
 import LockIcon from "./components/lock"
 import UnlockIcon from "./components/unlock"
 import TrashIcon from "./components/trash"
+import EditIcon from "./components/edit"
+import DuplicateIcon from "./components/duplicate"
 
 const IconsPlugin = () => ({
   components: {
@@ -20,6 +22,8 @@ const IconsPlugin = () => ({
     LockIcon,
     UnlockIcon,
     TrashIcon,
+    EditIcon,
+    DuplicateIcon,
   },
 })
 

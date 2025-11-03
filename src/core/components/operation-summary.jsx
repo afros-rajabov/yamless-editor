@@ -169,6 +169,9 @@ export default class OperationSummary extends PureComponent {
     const CopyToClipboardBtn = getComponent("CopyToClipboardBtn", true)
     const ArrowUpIcon = getComponent("ArrowUpIcon")
     const ArrowDownIcon = getComponent("ArrowDownIcon")
+    const EditIcon = getComponent("EditIcon")
+    const TrashIcon = getComponent("TrashIcon")
+    const DuplicateIcon = getComponent("DuplicateIcon")
 
     const hasSecurity = security && !!security.count()
     const securityIsOptional = hasSecurity && security.size === 1 && security.first().isEmpty()
@@ -217,16 +220,30 @@ export default class OperationSummary extends PureComponent {
 
           {displayOperationId && (originalOperationId || operationId) ? <span className="opblock-summary-operation-id">{originalOperationId || operationId}</span> : null}
         </button>
-        {!isEditing && <CopyToClipboardBtn textToCopy={`${specPath.get(1)}`} />}
+        {!isEditing && !isShown && <CopyToClipboardBtn textToCopy={`${specPath.get(1)}`} />}
         {isShown && (
           !isEditing ? (
-            <button 
-              className="opblock-summary-edit-btn"
-              onClick={this.handleEditClick}
-              title="Edit mode for operation"
-            >
-              ✎
-            </button>
+            <>
+              <button 
+                className="opblock-summary-edit-btn"
+                onClick={this.handleEditClick}
+                title="Edit mode for operation"
+              >
+                <EditIcon />
+              </button>
+              <button 
+                className="opblock-summary-duplicate-btn"
+                title="Create operation from this"
+              >
+                <DuplicateIcon />
+              </button>
+              <button 
+                className="opblock-summary-delete-btn"
+                title="Delete operation"
+              >
+                <TrashIcon />
+              </button>
+            </>
           ) : (
             <>
               <button 
