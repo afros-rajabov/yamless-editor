@@ -11,6 +11,8 @@ export default class AddOperationDialog extends React.Component {
     getComponent: PropTypes.func.isRequired,
     specSelectors: PropTypes.object.isRequired,
     specActions: PropTypes.object.isRequired,
+    layoutActions: PropTypes.object,
+    layoutSelectors: PropTypes.object,
   }
 
   handleKeyDown = (e) => {
@@ -24,7 +26,7 @@ export default class AddOperationDialog extends React.Component {
   }
 
   render() {
-    const { isOpen, onClose, getComponent, specSelectors, specActions } = this.props
+    const { isOpen, onClose, getComponent, specSelectors, specActions, layoutActions, layoutSelectors } = this.props
 
     if (!isOpen) {
       return null
@@ -50,6 +52,8 @@ export default class AddOperationDialog extends React.Component {
                   <AddOperationForm
                     specSelectors={specSelectors}
                     specActions={specActions}
+                    layoutActions={layoutActions}
+                    layoutSelectors={layoutSelectors}
                     onSave={this.handleSave}
                     onClose={onClose}
                   />
