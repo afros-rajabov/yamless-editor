@@ -181,6 +181,7 @@ export default class Operation extends PureComponent {
     const validationErrors = specSelectors.validationErrors([path, method])
 
     return (
+        <>
         <div className={deprecated ? "opblock opblock-deprecated" : isShown ? `opblock opblock-${method} is-open` : `opblock opblock-${method}`} id={escapeDeepLinkPath(isShownKey.join("-"))} >
           <OperationSummary 
             operationProps={operationProps}
@@ -203,6 +204,7 @@ export default class Operation extends PureComponent {
             onMethodChange={onMethodChange}
             onPathChange={onPathChange}
             onEditClick={this.props.onEditClick}
+            onDuplicateClick={this.props.onDuplicateClick}
             onSaveClick={onSaveClick}
             onCancelEdit={onCancelEdit}
             showValidationDialog={showValidationDialog}
@@ -370,6 +372,24 @@ export default class Operation extends PureComponent {
             </div>
           </Collapse>
         </div>
+        {(() => {
+          const { duplicateDialogOpen, sourceOperation, onCloseDuplicateDialog, specSelectors, specActions, layoutActions, layoutSelectors, getComponent } = this.props
+          if (!duplicateDialogOpen) return null
+          const AddOperationDialog = getComponent("AddOperationDialog", true)
+          return AddOperationDialog ? (
+            <AddOperationDialog
+              isOpen={duplicateDialogOpen}
+              onClose={onCloseDuplicateDialog}
+              getComponent={getComponent}
+              specSelectors={specSelectors}
+              specActions={specActions}
+              layoutActions={layoutActions}
+              layoutSelectors={layoutSelectors}
+              sourceOperation={sourceOperation}
+            />
+          ) : null
+        })()}
+        </>
     )
   }
 

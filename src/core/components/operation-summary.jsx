@@ -29,6 +29,7 @@ export default class OperationSummary extends PureComponent {
     onMethodChange: PropTypes.func,
     onPathChange: PropTypes.func,
     onEditClick: PropTypes.func,
+    onDuplicateClick: PropTypes.func,
     onSaveClick: PropTypes.func,
     onCancelEdit: PropTypes.func,
     showValidationDialog: PropTypes.bool,
@@ -62,6 +63,13 @@ export default class OperationSummary extends PureComponent {
     const { onEditClick } = this.props
     if (onEditClick) {
       onEditClick()
+    }
+  }
+
+  handleDuplicateClick = () => {
+    const { onDuplicateClick } = this.props
+    if (onDuplicateClick) {
+      onDuplicateClick()
     }
   }
 
@@ -234,6 +242,7 @@ export default class OperationSummary extends PureComponent {
               <button 
                 className="opblock-summary-duplicate-btn"
                 title="Create operation from this"
+                onClick={this.handleDuplicateClick}
               >
                 <DuplicateIcon />
               </button>

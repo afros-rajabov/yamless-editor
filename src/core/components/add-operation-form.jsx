@@ -12,16 +12,19 @@ export default class AddOperationForm extends Component {
     specActions: PropTypes.object.isRequired,
     layoutActions: PropTypes.object,
     layoutSelectors: PropTypes.object,
+    sourceOperation: PropTypes.object,
     onSave: PropTypes.func.isRequired,
     onClose: PropTypes.func.isRequired,
   }
 
   constructor(props) {
     super(props)
+    const { sourceOperation } = props
+    
     this.state = {
-      method: "get",
-      path: "",
-      tag: "",
+      method: sourceOperation ? sourceOperation.method : "get",
+      path: sourceOperation ? sourceOperation.path : "",
+      tag: sourceOperation ? sourceOperation.tag : "",
       tagSearch: "",
       tagDropdownOpen: false,
       pathValidationError: null,
@@ -95,7 +98,7 @@ export default class AddOperationForm extends Component {
     e.preventDefault()
 
     const { method, path, tag } = this.state
-    const { specSelectors, specActions, layoutActions, layoutSelectors, onSave } = this.props
+    const { specSelectors, specActions, layoutActions, layoutSelectors, onSave, sourceOperation } = this.props
 
     // Reset errors
     this.setState({
@@ -145,7 +148,7 @@ export default class AddOperationForm extends Component {
     }
 
     // Create parameters array with detected path parameters
-    const parameters = Array.from(detectedParamNames).map((name) => ({
+    const detectedPathParameters = Array.from(detectedParamNames).map((name) => ({
       name,
       in: "path",
       required: true,
@@ -165,16 +168,44 @@ export default class AddOperationForm extends Component {
         js.paths[trimmedPath] = {}
       }
 
-      // Create new operation object with summary, description, tags, and parameters
-      const newOperation = {
-        summary: "Default Summary",
-        description: "# Hello World",
-        tags: [tag],
-      }
-
-      // Add parameters if any were detected
-      if (parameters.length > 0) {
-        newOperation.parameters = parameters
+      // Create new operation object
+      let newOperation
+      
+      if (sourceOperation) {
+        // Duplicate mode: copy all data from source operation
+        const sourceOp = sourceOperation.operation
+        // Deep copy to avoid references
+        newOperation = JSON.parse(JSON.stringify(sourceOp))
+        // Update tags to use the selected tag
+        newOperation.tags = [tag]
+        // Ensure operationId is not copied (remove if present)
+        if (newOperation.operationId !== undefined) {
+          delete newOperation.operationId
+        }
+        // Update path parameters if path changed
+        if (trimmedPath !== sourceOperation.path) {
+          // Initialize parameters array if not present
+          if (!newOperation.parameters) {
+            newOperation.parameters = []
+          }
+          // Remove old path parameters
+          newOperation.parameters = newOperation.parameters.filter(p => p.in !== "path")
+          // Add new detected path parameters
+          if (detectedPathParameters.length > 0) {
+            newOperation.parameters = [...newOperation.parameters, ...detectedPathParameters]
+          }
+        }
+      } else {
+        // Create new operation with default values
+        newOperation = {
+          summary: "Default Summary",
+          description: "# Hello World",
+          tags: [tag],
+        }
+        // Add parameters if any were detected
+        if (detectedPathParameters.length > 0) {
+          newOperation.parameters = detectedPathParameters
+        }
       }
 
       js.paths[trimmedPath][method.toLowerCase()] = newOperation
@@ -183,9 +214,8 @@ export default class AddOperationForm extends Component {
       const asString = JSON.stringify(js, null, 2)
       specActions.updateSpec(asString)
 
-      // Close all opened operations and tags, then open the tag with the new operation
+      // Close all opened operations
       if (layoutActions && layoutSelectors) {
-        // Close all opened operations
         const taggedOps = specSelectors.taggedOperations()
         if (taggedOps && taggedOps.forEach) {
           taggedOps.forEach((tagObj, tagName) => {
@@ -200,24 +230,21 @@ export default class AddOperationForm extends Component {
             }
           })
         }
-
-        // Close all tags except the one with the new operation
-        const tags = specSelectors.tags()
-        if (tags && tags.forEach) {
-          tags.forEach((t) => {
-            const tagName = t && t.get && t.get("name")
-            if (tagName) {
-              layoutActions.show(["operations-tag", tagName], tagName === tag)
-            }
-          })
-        }
       }
 
       // Close dialog and reset form
-      this.setState({
+      const resetState = sourceOperation ? {
+        method: sourceOperation.method,
+        path: sourceOperation.path,
+        tag: sourceOperation.tag,
+      } : {
         method: "get",
         path: "",
         tag: "",
+      }
+      
+      this.setState({
+        ...resetState,
         tagSearch: "",
         pathValidationError: null,
         uniquenessError: null,
@@ -231,6 +258,8 @@ export default class AddOperationForm extends Component {
 
   render() {
     const { method, path, tag, tagSearch, tagDropdownOpen, pathValidationError, uniquenessError } = this.state
+    const { sourceOperation } = this.props
+    const isDuplicateMode = !!sourceOperation
 
     const methodOptions = [
       { value: "get", label: "GET" },
@@ -268,7 +297,13 @@ export default class AddOperationForm extends Component {
           <label className="form-label">
             Method <span className="required">*</span>
           </label>
-          <select className="form-input" value={method} onChange={this.handleMethodChange} required>
+          <select 
+            className="form-input" 
+            value={method} 
+            onChange={this.handleMethodChange} 
+            required
+            disabled={isDuplicateMode}
+          >
             <option value="">Select method...</option>
             {methodOptions.map((option) => (
               <option key={option.value} value={option.value}>
