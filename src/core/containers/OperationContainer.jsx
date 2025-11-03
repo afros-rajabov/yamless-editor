@@ -261,6 +261,60 @@ export default class OperationContainer extends PureComponent {
     })
   }
 
+  handleDuplicateClick = () => {
+    const { path, method, tag, specSelectors } = this.props
+    const resolvedSubtree = this.getResolvedSubtree() || new Map()
+    
+    // Get original operation data from spec to preserve $refs (similar to edit mode)
+    const specJson = specSelectors?.specJson?.()
+    let operationData = null
+    
+    if (specJson) {
+      try {
+        const originalOp = specJson.getIn(["paths", path, method])
+        if (originalOp) {
+          // Convert to plain JS for easier handling
+          operationData = originalOp.toJS()
+        }
+      } catch (error) {
+        console.warn('Failed to get original operation data:', error)
+        // Fallback to resolved data
+        operationData = resolvedSubtree.toJS()
+      }
+    }
+    
+    if (!operationData) {
+      // Fallback to resolved data
+      operationData = resolvedSubtree.toJS()
+    }
+    
+    // Remove operationId if present (should not be copied)
+    if (operationData.operationId !== undefined) {
+      delete operationData.operationId
+    }
+    
+    // Create source operation object for dialog
+    const sourceOperation = {
+      path,
+      method,
+      tag: tag || (operationData.tags && operationData.tags[0]) || "",
+      operation: operationData
+    }
+    
+    // Open duplicate dialog
+    this.setState({
+      duplicateDialogOpen: true,
+      sourceOperation
+    })
+  }
+
+  handleCloseDuplicateDialog = () => {
+    this.setState({
+      duplicateDialogOpen: false,
+      sourceOperation: null
+    })
+  }
+
   handleSummaryChange = (newSummary) => {
     this.setState({ selectedSummary: newSummary })
   }
@@ -746,6 +800,11 @@ export default class OperationContainer extends PureComponent {
         getConfigs={ getConfigs }
         fn={fn}
         
+        // Duplicate dialog state
+        duplicateDialogOpen={this.state.duplicateDialogOpen}
+        sourceOperation={this.state.sourceOperation}
+        onCloseDuplicateDialog={this.handleCloseDuplicateDialog}
+        
         // Pass editing state from container state
         isEditing={this.state.isEditing}
         selectedSummary={this.state.selectedSummary}
@@ -759,6 +818,7 @@ export default class OperationContainer extends PureComponent {
         onEditClick={this.handleEditClick}
         onSaveClick={this.handleSaveClick}
         onCancelEdit={this.handleCancelClick}
+        onDuplicateClick={this.handleDuplicateClick}
         showValidationDialog={this.state.showValidationDialog}
         validationError={this.state.validationError}
         onCloseValidationDialog={this.closeValidationDialog}

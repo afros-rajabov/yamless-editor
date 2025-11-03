@@ -13,6 +13,7 @@ export default class AddOperationDialog extends React.Component {
     specActions: PropTypes.object.isRequired,
     layoutActions: PropTypes.object,
     layoutSelectors: PropTypes.object,
+    sourceOperation: PropTypes.object,
   }
 
   handleKeyDown = (e) => {
@@ -26,7 +27,7 @@ export default class AddOperationDialog extends React.Component {
   }
 
   render() {
-    const { isOpen, onClose, getComponent, specSelectors, specActions, layoutActions, layoutSelectors } = this.props
+    const { isOpen, onClose, getComponent, specSelectors, specActions, layoutActions, layoutSelectors, sourceOperation } = this.props
 
     if (!isOpen) {
       return null
@@ -34,6 +35,7 @@ export default class AddOperationDialog extends React.Component {
 
     const CloseIcon = getComponent("CloseIcon")
     const AddOperationForm = getComponent("AddOperationForm", true)
+    const title = sourceOperation ? "Duplicate Operation" : "Add New Operation"
 
     return (
       <div className="dialog-ux" aria-modal="true" role="dialog">
@@ -42,7 +44,7 @@ export default class AddOperationDialog extends React.Component {
           <div className="modal-dialog-ux">
             <div className="modal-ux-inner">
               <div className="modal-ux-header">
-                <h3>Add New Operation</h3>
+                <h3>{title}</h3>
                 <button type="button" className="close-modal" onClick={onClose} aria-label="Close">
                   {CloseIcon ? <CloseIcon /> : "✕"}
                 </button>
@@ -54,6 +56,7 @@ export default class AddOperationDialog extends React.Component {
                     specActions={specActions}
                     layoutActions={layoutActions}
                     layoutSelectors={layoutSelectors}
+                    sourceOperation={sourceOperation}
                     onSave={this.handleSave}
                     onClose={onClose}
                   />
