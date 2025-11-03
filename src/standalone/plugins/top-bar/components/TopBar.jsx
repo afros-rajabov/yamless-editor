@@ -170,34 +170,34 @@ class TopBar extends React.Component {
     let control = []
     let formOnSubmit = null
 
-    if(urls) {
-      let rows = []
-      urls.forEach((link, i) => {
-        rows.push(<option key={i} value={link.url}>{link.name}</option>)
-      })
+    // if(urls) {
+    //   let rows = []
+    //   urls.forEach((link, i) => {
+    //     rows.push(<option key={i} value={link.url}>{link.name}</option>)
+    //   })
 
-      control.push(
-        <label className="select-label" htmlFor="select"><span>Select a definition</span>
-          <select id="select" disabled={isLoading} onChange={ this.onUrlSelect } value={urls[this.state.selectedIndex].url}>
-            {rows}
-          </select>
-        </label>
-      )
-    }
-    else {
-      formOnSubmit = this.downloadUrl
-      control.push(
-        <input
-          className={classNames.join(" ")}
-          type="text"
-          onChange={this.onUrlChange}
-          value={this.state.url}
-          disabled={isLoading}
-          id="download-url-input"
-        />
-      )
-      control.push(<Button className="download-url-button" onClick={ this.downloadUrl }>Explore</Button>)
-    }
+    //   control.push(
+    //     <label className="select-label" htmlFor="select"><span>Select a definition</span>
+    //       <select id="select" disabled={isLoading} onChange={ this.onUrlSelect } value={urls[this.state.selectedIndex].url}>
+    //         {rows}
+    //       </select>
+    //     </label>
+    //   )
+    // }
+    // else {
+    //   formOnSubmit = this.downloadUrl
+    //   control.push(
+    //     <input
+    //       className={classNames.join(" ")}
+    //       type="text"
+    //       onChange={this.onUrlChange}
+    //       value={this.state.url}
+    //       disabled={isLoading}
+    //       id="download-url-input"
+    //     />
+    //   )
+    //   control.push(<Button className="download-url-button" onClick={ this.downloadUrl }>Explore</Button>)
+    // }
 
     return (
       <div className="topbar">
@@ -209,7 +209,8 @@ class TopBar extends React.Component {
             <form className="download-url-wrapper" onSubmit={formOnSubmit}>
               {control.map((el, i) => cloneElement(el, { key: i }))}
             </form>
-            <Button className="download-spec-button" onClick={ this.downloadCurrentSpec }>Download JSON</Button>
+            <Button className="download-spec-button">Upload</Button>
+            <Button className="download-spec-button" onClick={ this.downloadCurrentSpec }>Download</Button>
           </div>
         </div>
       </div>
