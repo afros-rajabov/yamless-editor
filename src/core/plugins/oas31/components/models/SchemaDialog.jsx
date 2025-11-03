@@ -1018,7 +1018,7 @@ const SchemaDialog = ({
 
               <div className="modal-actions-row">
                 <Button className="btn modal-btn" onClick={closeDialog}>Cancel</Button>
-                <Button className="btn modal-btn" onClick={handleAddSchema}>Add Schema</Button>
+                <Button className="btn modal-btn authorize" onClick={handleAddSchema}>Add Schema</Button>
               </div>
             </div>
           </div>

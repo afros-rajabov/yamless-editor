@@ -58,6 +58,46 @@
     }
   }
 
+  &.green-filled {
+    line-height: 1;
+
+    display: inline;
+
+    color: $white;
+    border-color: $btn-authorize-border-color;
+    background-color: $btn-authorize-border-color;
+
+    span {
+      float: left;
+
+      padding: 4px 20px 0 0;
+    }
+
+    svg {
+      fill: $white;
+    }
+  }
+
+  &.black-filled {
+    line-height: 1;
+
+    display: inline;
+
+    color: $white;
+    border-color: $black;
+    background-color: $black;
+
+    span {
+      float: left;
+
+      padding: 4px 20px 0 0;
+    }
+
+    svg {
+      fill: $white;
+    }
+  }
+
   &.execute {
     background-color: $btn-execute-background-color-alt;
     color: $btn-execute-font-color;

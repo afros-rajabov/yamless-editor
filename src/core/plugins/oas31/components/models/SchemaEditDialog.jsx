@@ -1019,7 +1019,7 @@ const SchemaEditDialog = ({
 
               <div className="modal-actions-row">
                 <Button className="btn modal-btn" onClick={closeDialog}>Cancel</Button>
-                <Button className="btn modal-btn" onClick={handleUpdateSchema}>Update Schema</Button>
+                <Button className="btn modal-btn authorize" onClick={handleUpdateSchema}>Update Schema</Button>
               </div>
             </div>
           </div>

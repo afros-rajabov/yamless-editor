@@ -64,6 +64,13 @@ export default class Operations extends React.Component {
         specActions={this.props.specActions}
         specUrl={specSelectors.url()}>
         <div className="operation-tag-content">
+          <div style={{ textAlign: "right", margin: "10px 0" }}>
+            <button 
+              className="btn" 
+              type="button">
+              Add
+            </button>
+          </div>
           {
             operations.map(op => {
               const path = op.get("path")

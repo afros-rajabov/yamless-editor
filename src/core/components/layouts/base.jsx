@@ -136,7 +136,13 @@ export default class BaseLayout extends React.Component {
 
 
           <FilterContainer />
-
+          <Row>
+            <Col mobile={12} desktop={12}>
+              <div style={{ textAlign: "right", marginBottom: "10px" }}>
+                <button className="btn" type="button">Add Operation</button>
+              </div>
+            </Col>
+          </Row>
           <Row>
             <Col mobile={12} desktop={12}>
               <Operations />
