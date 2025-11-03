@@ -56,7 +56,10 @@ export default class ParameterEditForm extends Component {
 
   initializeFormData = () => {
     if (this.props.parameter) {
-      return parameterToFormData(this.props.parameter.toJS())
+      // Get the parameter as a plain JS object
+      // deepResolveSchema already preserves $ref in the schema, so we should have it
+      const paramJS = this.props.parameter.toJS ? this.props.parameter.toJS() : this.props.parameter
+      return parameterToFormData(paramJS)
     }
     
     return {
