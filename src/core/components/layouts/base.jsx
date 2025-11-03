@@ -115,7 +115,7 @@ export default class BaseLayout extends React.Component {
             </Col>
           </Row>
 
-          {hasServers || hasSchemes || hasSecurityDefinitions ? (
+          {/* {hasServers || hasSchemes || hasSecurityDefinitions ? (
             <div className="scheme-container">
               <Col className="schemes wrapper" mobile={12}>
                 {hasServers || hasSchemes ? (
@@ -127,7 +127,7 @@ export default class BaseLayout extends React.Component {
                 {hasSecurityDefinitions ? <AuthorizeBtnContainer /> : null}
               </Col>
             </div>
-          ) : null}
+          ) : null} */}
 
           <Row className="tags-badges-container">
             <Col mobile={12}>
