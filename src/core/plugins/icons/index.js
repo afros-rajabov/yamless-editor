@@ -11,6 +11,7 @@ import UnlockIcon from "./components/unlock"
 import TrashIcon from "./components/trash"
 import EditIcon from "./components/edit"
 import DuplicateIcon from "./components/duplicate"
+import SaveIcon from "./components/save"
 
 const IconsPlugin = () => ({
   components: {
@@ -24,6 +25,7 @@ const IconsPlugin = () => ({
     TrashIcon,
     EditIcon,
     DuplicateIcon,
+    SaveIcon,
   },
 })
 
