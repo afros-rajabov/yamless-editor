@@ -46,6 +46,11 @@ export default class Operation extends PureComponent {
     onMethodChange: PropTypes.func,
     onPathChange: PropTypes.func,
     onEditClick: PropTypes.func,
+    onDuplicateClick: PropTypes.func,
+    onDeleteClick: PropTypes.func,
+    showDeleteDialog: PropTypes.bool,
+    onConfirmDelete: PropTypes.func,
+    onCancelDelete: PropTypes.func,
     onSaveClick: PropTypes.func,
     onCancelEdit: PropTypes.func,
     showValidationDialog: PropTypes.bool,
@@ -81,6 +86,11 @@ export default class Operation extends PureComponent {
     onMethodChange: null,
     onPathChange: null,
     onEditClick: null,
+    onDuplicateClick: null,
+    onDeleteClick: null,
+    showDeleteDialog: false,
+    onConfirmDelete: null,
+    onCancelDelete: null,
     onSaveClick: null,
     onCancelEdit: null,
     showValidationDialog: false,
@@ -205,6 +215,10 @@ export default class Operation extends PureComponent {
             onPathChange={onPathChange}
             onEditClick={this.props.onEditClick}
             onDuplicateClick={this.props.onDuplicateClick}
+            onDeleteClick={this.props.onDeleteClick}
+            showDeleteDialog={this.props.showDeleteDialog}
+            onConfirmDelete={this.props.onConfirmDelete}
+            onCancelDelete={this.props.onCancelDelete}
             onSaveClick={onSaveClick}
             onCancelEdit={onCancelEdit}
             showValidationDialog={showValidationDialog}

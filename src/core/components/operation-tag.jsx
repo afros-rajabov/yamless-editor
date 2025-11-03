@@ -130,10 +130,10 @@ export default class OperationTag extends React.Component {
           {isEmptyTag ? (
             <button
               aria-label="Delete tag"
-              className="expand-operation"
+              className="opblock-summary-delete-btn"
               title="Delete tag"
               onClick={(e) => { e.stopPropagation(); onDeleteTag() }}>
-              {TrashIcon ? <TrashIcon className="arrow" /> : <span style={{fontSize: '20px', fontWeight: 'bold'}}>🗑️</span>}
+              <TrashIcon />
             </button>
           ) : (
             <button

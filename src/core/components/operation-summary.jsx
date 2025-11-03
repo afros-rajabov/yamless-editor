@@ -4,6 +4,7 @@ import { Iterable, List, Map } from "immutable"
 import ImPropTypes from "react-immutable-proptypes"
 import toString from "lodash/toString"
 import OperationValidationDialog from "./operation-validation-dialog"
+import OperationDeleteDialog from "./operation-delete-dialog"
 
 
 export default class OperationSummary extends PureComponent {
@@ -30,6 +31,10 @@ export default class OperationSummary extends PureComponent {
     onPathChange: PropTypes.func,
     onEditClick: PropTypes.func,
     onDuplicateClick: PropTypes.func,
+    onDeleteClick: PropTypes.func,
+    showDeleteDialog: PropTypes.bool,
+    onConfirmDelete: PropTypes.func,
+    onCancelDelete: PropTypes.func,
     onSaveClick: PropTypes.func,
     onCancelEdit: PropTypes.func,
     showValidationDialog: PropTypes.bool,
@@ -52,6 +57,11 @@ export default class OperationSummary extends PureComponent {
     onMethodChange: null,
     onPathChange: null,
     onEditClick: null,
+    onDuplicateClick: null,
+    onDeleteClick: null,
+    showDeleteDialog: false,
+    onConfirmDelete: null,
+    onCancelDelete: null,
     onSaveClick: null,
     onCancelEdit: null,
     showValidationDialog: false,
@@ -70,6 +80,13 @@ export default class OperationSummary extends PureComponent {
     const { onDuplicateClick } = this.props
     if (onDuplicateClick) {
       onDuplicateClick()
+    }
+  }
+
+  handleDeleteClick = () => {
+    const { onDeleteClick } = this.props
+    if (onDeleteClick) {
+      onDeleteClick()
     }
   }
 
@@ -141,6 +158,10 @@ export default class OperationSummary extends PureComponent {
       selectedPath,
       onSummaryChange,
       onDescriptionChange,
+      onDeleteClick,
+      showDeleteDialog,
+      onConfirmDelete,
+      onCancelDelete,
       showValidationDialog,
       validationError,
       onCloseValidationDialog,
@@ -249,6 +270,7 @@ export default class OperationSummary extends PureComponent {
               <button 
                 className="opblock-summary-delete-btn"
                 title="Delete operation"
+                onClick={this.handleDeleteClick}
               >
                 <TrashIcon />
               </button>
@@ -295,6 +317,14 @@ export default class OperationSummary extends PureComponent {
           isOpen={showValidationDialog}
           errorMessage={validationError}
           onClose={onCloseValidationDialog}
+          getComponent={getComponent}
+        />
+        <OperationDeleteDialog
+          isOpen={showDeleteDialog}
+          method={currentMethod}
+          path={currentPath}
+          onConfirm={onConfirmDelete}
+          onCancel={onCancelDelete}
           getComponent={getComponent}
         />
       </div>

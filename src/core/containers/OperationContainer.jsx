@@ -26,7 +26,8 @@ export default class OperationContainer extends PureComponent {
       pendingResponses: null,
       pendingResponseOperations: [],
       pendingRequestBody: null,
-      pendingRequestBodyOperations: []
+      pendingRequestBodyOperations: [],
+      deleteDialogOpen: false
     }
   }
 
@@ -312,6 +313,49 @@ export default class OperationContainer extends PureComponent {
     this.setState({
       duplicateDialogOpen: false,
       sourceOperation: null
+    })
+  }
+
+  handleDeleteClick = () => {
+    this.setState({
+      deleteDialogOpen: true
+    })
+  }
+
+  handleConfirmDelete = () => {
+    const { specSelectors, specActions, path, method } = this.props
+
+    try {
+      const spec = specSelectors.specJson()
+      const js = spec && typeof spec.toJS === "function" ? spec.toJS() : {}
+      const next = { ...js }
+
+      // Delete the operation from the path
+      if (next.paths && next.paths[path] && next.paths[path][method]) {
+        delete next.paths[path][method]
+
+        // Clean up empty path object if no operations remain
+        const pathOperations = Object.keys(next.paths[path] || {})
+          .filter(key => !key.startsWith("$ref") && key !== "servers" && key !== "summary" && key !== "description" && key !== "parameters")
+        
+        if (pathOperations.length === 0) {
+          delete next.paths[path]
+        }
+      }
+
+      const asString = JSON.stringify(next, null, 2)
+      specActions.updateSpec(asString)
+      this.setState({ deleteDialogOpen: false })
+    } catch (e) {
+      console.error("Error deleting operation:", e)
+      // Close dialog even on error
+      this.setState({ deleteDialogOpen: false })
+    }
+  }
+
+  handleCancelDelete = () => {
+    this.setState({
+      deleteDialogOpen: false
     })
   }
 
@@ -819,6 +863,10 @@ export default class OperationContainer extends PureComponent {
         onSaveClick={this.handleSaveClick}
         onCancelEdit={this.handleCancelClick}
         onDuplicateClick={this.handleDuplicateClick}
+        onDeleteClick={this.handleDeleteClick}
+        showDeleteDialog={this.state.deleteDialogOpen}
+        onConfirmDelete={this.handleConfirmDelete}
+        onCancelDelete={this.handleCancelDelete}
         showValidationDialog={this.state.showValidationDialog}
         validationError={this.state.validationError}
         onCloseValidationDialog={this.closeValidationDialog}

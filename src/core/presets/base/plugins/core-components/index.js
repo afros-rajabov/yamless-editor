@@ -27,6 +27,7 @@ import OperationMethod from "core/components/operation-method"
 import OperationPath from "core/components/operation-path"
 import OperationExt from "core/components/operation-extensions"
 import OperationExtRow from "core/components/operation-extension-row"
+import OperationDeleteDialog from "core/components/operation-delete-dialog"
 import Responses from "core/components/responses"
 import Response from "core/components/response"
 import ResponseExtension from "core/components/response-extension"
@@ -146,6 +147,7 @@ const CoreComponentsPlugin = () => ({
     AddOperationButton,
     AddOperationDialog,
     AddOperationForm,
+    OperationDeleteDialog,
   },
 })
 
