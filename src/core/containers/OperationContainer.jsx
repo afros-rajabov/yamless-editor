@@ -170,7 +170,32 @@ export default class OperationContainer extends PureComponent {
     // Get summary and description from the resolved operation data
     const summary = resolvedSubtree.get("summary") || ''
     const description = resolvedSubtree.get("description") || ''
-    const parameters = resolvedSubtree.get("parameters", List())
+    
+    // Get parameters from original spec JSON to preserve $ref references
+    // This ensures schema references are preserved when editing
+    const { specSelectors } = this.props
+    const specJson = specSelectors?.specJson?.()
+    let parameters = List()
+    
+    if (specJson) {
+      try {
+        // Get original parameters from spec (unresolved, preserves $ref)
+        const originalParams = specJson.getIn(["paths", path, method, "parameters"], List())
+        if (originalParams && originalParams.size > 0) {
+          parameters = originalParams
+        } else {
+          // Fallback to resolved if original not found
+          parameters = resolvedSubtree.get("parameters", List())
+        }
+      } catch (error) {
+        // Fallback to resolved if accessing spec fails
+        parameters = resolvedSubtree.get("parameters", List())
+      }
+    } else {
+      // Fallback to resolved if specJson not available
+      parameters = resolvedSubtree.get("parameters", List())
+    }
+    
     const responses = resolvedSubtree.get("responses", Map())
     const requestBody = resolvedSubtree.get("requestBody")
     
@@ -178,6 +203,7 @@ export default class OperationContainer extends PureComponent {
     const cleanParameters = parameters.map(param => {
       try {
         // Convert to plain JS and back to ensure clean serializable data
+        // This preserves the original structure including $ref in schemas
         return fromJS(param.toJS())
       } catch (error) {
         console.warn('Failed to clean parameter, using original:', error)
