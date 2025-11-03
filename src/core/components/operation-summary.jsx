@@ -223,7 +223,7 @@ export default class OperationSummary extends PureComponent {
             <button 
               className="opblock-summary-edit-btn"
               onClick={this.handleEditClick}
-              title="Edit method and path"
+              title="Edit mode for operation"
             >
               ✎
             </button>

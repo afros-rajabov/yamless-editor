@@ -27,7 +27,7 @@ export default class AddOperationButton extends React.Component {
   }
 
   render() {
-    const { specSelectors, specActions, getComponent } = this.props
+    const { specSelectors, specActions, getComponent, layoutActions, layoutSelectors } = this.props
     const { isDialogOpen } = this.state
 
     const AddOperationDialog = getComponent("AddOperationDialog", true)
@@ -46,6 +46,8 @@ export default class AddOperationButton extends React.Component {
             getComponent={getComponent}
             specSelectors={specSelectors}
             specActions={specActions}
+            layoutActions={layoutActions}
+            layoutSelectors={layoutSelectors}
           />
         ) : null}
       </>

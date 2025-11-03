@@ -10,6 +10,8 @@ export default class AddOperationForm extends Component {
   static propTypes = {
     specSelectors: PropTypes.object.isRequired,
     specActions: PropTypes.object.isRequired,
+    layoutActions: PropTypes.object,
+    layoutSelectors: PropTypes.object,
     onSave: PropTypes.func.isRequired,
     onClose: PropTypes.func.isRequired,
   }
@@ -93,7 +95,7 @@ export default class AddOperationForm extends Component {
     e.preventDefault()
 
     const { method, path, tag } = this.state
-    const { specSelectors, specActions, onSave } = this.props
+    const { specSelectors, specActions, layoutActions, layoutSelectors, onSave } = this.props
 
     // Reset errors
     this.setState({
@@ -180,6 +182,36 @@ export default class AddOperationForm extends Component {
       // Convert back to string and update spec
       const asString = JSON.stringify(js, null, 2)
       specActions.updateSpec(asString)
+
+      // Close all opened operations and tags, then open the tag with the new operation
+      if (layoutActions && layoutSelectors) {
+        // Close all opened operations
+        const taggedOps = specSelectors.taggedOperations()
+        if (taggedOps && taggedOps.forEach) {
+          taggedOps.forEach((tagObj, tagName) => {
+            const operations = tagObj.get("operations")
+            if (operations && operations.forEach) {
+              operations.forEach((op) => {
+                const operationId = op.get("id")
+                if (operationId) {
+                  layoutActions.show(["operations", tagName, operationId], false)
+                }
+              })
+            }
+          })
+        }
+
+        // Close all tags except the one with the new operation
+        const tags = specSelectors.tags()
+        if (tags && tags.forEach) {
+          tags.forEach((t) => {
+            const tagName = t && t.get && t.get("name")
+            if (tagName) {
+              layoutActions.show(["operations-tag", tagName], tagName === tag)
+            }
+          })
+        }
+      }
 
       // Close dialog and reset form
       this.setState({
