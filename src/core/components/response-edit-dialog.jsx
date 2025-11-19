@@ -94,9 +94,6 @@ export default class ResponseEditDialog extends React.Component {
                     method={this.props.method}
                   />
                 ) : null}
-                <div className="modal-actions-row">
-                  <Button className="btn modal-btn" onClick={onClose}>Close</Button>
-                </div>
               </div>
             </div>
           </div>

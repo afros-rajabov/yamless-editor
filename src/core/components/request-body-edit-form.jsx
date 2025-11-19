@@ -243,7 +243,7 @@ export default class RequestBodyEditForm extends Component {
     const isEditing = Boolean(requestBody)
 
     const saveLabel = isOperationEditMode
-      ? (isEditing ? "Stage Update" : "Stage New Request Body")
+      ? (isEditing ? "Update" : "Add")
       : (isEditing ? "Update Request Body" : "Add Request Body")
 
     const allPrimitiveTypeOptions = getPrimitiveTypeOptions()
@@ -311,11 +311,11 @@ export default class RequestBodyEditForm extends Component {
               Description
             </label>
             <textarea
-              className="form-input"
+              className="form-textarea"
               value={description}
               onChange={(event) => this.handleInputChange("description", event.target.value)}
               placeholder="Describe the request body"
-              rows="3"
+              rows="6"
             />
           </div>
 
@@ -331,14 +331,7 @@ export default class RequestBodyEditForm extends Component {
           </div>
         </div>
 
-        <div className="parameter-edit-form-actions" style={{ display: "flex", gap: "8px" }}>
-          <button
-            className="btn btn-primary"
-            onClick={this.handleSave}
-          >
-            {saveLabel}
-          </button>
-
+        <div className="parameter-edit-form-actions">
           <button
             className="btn btn-secondary"
             onClick={this.handleReset}
@@ -351,9 +344,16 @@ export default class RequestBodyEditForm extends Component {
               className="btn btn-danger"
               onClick={this.handleDelete}
             >
-              {isOperationEditMode ? "Stage Deletion" : "Delete Request Body"}
+              {isOperationEditMode ? "Delete" : "Delete Request Body"}
             </button>
           ) : null}
+
+          <button
+            className="btn btn-primary"
+            onClick={this.handleSave}
+          >
+            {saveLabel}
+          </button>
         </div>
       </div>
     )

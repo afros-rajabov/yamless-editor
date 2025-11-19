@@ -76,7 +76,7 @@ export default class RequestBodyEditDialog extends React.Component {
                   {CloseIcon ? <CloseIcon /> : "✕"}
                 </button>
               </div>
-              <div className="modal-ux-content" onKeyDown={this.handleKeyDown} style={{ maxHeight: "90vh", minHeight: "500px", overflowY: "auto" }}>
+              <div className="modal-ux-content" onKeyDown={this.handleKeyDown} style={{ maxHeight: "90vh", overflowY: "auto" }}>
                 {RequestBodyEditForm ? (
                   <RequestBodyEditForm
                     requestBody={requestBody}
@@ -88,9 +88,6 @@ export default class RequestBodyEditDialog extends React.Component {
                     method={method}
                   />
                 ) : null}
-                <div className="modal-actions-row">
-                  <Button className="btn modal-btn" onClick={onClose}>Close</Button>
-                </div>
               </div>
             </div>
           </div>

@@ -77,9 +77,6 @@ export default class ParameterEditDialog extends React.Component {
                   specSelectors={specSelectors}
                   isOperationEditMode={isOperationEditMode}
                 />
-                <div className="modal-actions-row">
-                  <Button className="btn modal-btn" onClick={onClose}>Close</Button>
-                </div>
               </div>
             </div>
           </div>

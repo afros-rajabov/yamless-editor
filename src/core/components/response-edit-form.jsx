@@ -500,7 +500,7 @@ export default class ResponseEditForm extends Component {
     const isEditing = Boolean(initialCode)
 
     const saveLabel = isOperationEditMode
-      ? (isEditing ? "Stage Update" : "Stage New Response")
+      ? (isEditing ? "Update" : "Add")
       : (isEditing ? "Update Response" : "Add Response")
 
     const allPrimitiveTypeOptions = getPrimitiveTypeOptions()
@@ -688,24 +688,17 @@ export default class ResponseEditForm extends Component {
             <label className="form-label">
               Description
             </label>
-            <input
-              type="text"
-              className="form-input"
+            <textarea
+              className="form-textarea"
               value={description}
               onChange={(event) => this.handleInputChange("description", event.target.value)}
               placeholder="Describe the response"
+              rows={6}
             />
           </div>
         </div>
 
-        <div className="parameter-edit-form-actions" style={{ display: "flex", gap: "8px" }}>
-          <button
-            className="btn btn-primary"
-            onClick={this.handleSave}
-          >
-            {saveLabel}
-          </button>
-
+        <div className="parameter-edit-form-actions">
           <button
             className="btn btn-secondary"
             onClick={this.handleReset}
@@ -718,9 +711,16 @@ export default class ResponseEditForm extends Component {
               className="btn btn-danger"
               onClick={this.handleDelete}
             >
-              {isOperationEditMode ? "Stage Deletion" : "Delete Response"}
+              {isOperationEditMode ? "Delete" : "Delete"}
             </button>
           ) : null}
+
+          <button
+            className="btn btn-primary"
+            onClick={this.handleSave}
+          >
+            {saveLabel}
+          </button>
         </div>
       </div>
     )

@@ -85,6 +85,8 @@
       border-radius: 4px;
       font-size: 14px;
       box-sizing: border-box;
+      min-height: unset;
+      min-width: 100%
     }
 
     .modal-actions-row {

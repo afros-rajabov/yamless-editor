@@ -380,22 +380,12 @@ export default class ParameterEditForm extends Component {
           </div>
         </div>
 
-        <div className="parameter-edit-form-actions">
-          <button
-            className="btn btn-primary"
-            onClick={this.handleSave}
-          >
-            {isOperationEditMode 
-              ? (isEditing ? "Stage Update" : "Stage New Parameter")
-              : (isEditing ? "Update Parameter" : "Add Parameter")
-            }
-          </button>
-          
+        <div className="parameter-edit-form-actions">       
           <button
             className="btn btn-secondary"
             onClick={this.handleClear}
           >
-            Clear
+            Reset
           </button>
           
           {isEditing && (
@@ -403,9 +393,18 @@ export default class ParameterEditForm extends Component {
               className="btn btn-danger"
               onClick={this.handleDelete}
             >
-              {isOperationEditMode ? "Stage Deletion" : "Delete Parameter"}
+              {isOperationEditMode ? "Delete" : "Delete"}
             </button>
           )}
+          <button
+            className="btn btn-primary"
+            onClick={this.handleSave}
+          >
+            {isOperationEditMode 
+              ? (isEditing ? "Update" : "Add")
+              : (isEditing ? "Update Parameter" : "Add Parameter")
+            }
+          </button>
         </div>
       </div>
     )

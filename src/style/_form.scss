@@ -11,7 +11,9 @@
   background-color: #fafafa;
 }
 
-.parameter-edit-form {
+.parameter-edit-form,
+.response-edit-form,
+.request-body-edit-form {
   .parameter-edit-form-header {
     margin-bottom: 20px;
     
@@ -105,8 +107,8 @@
 
   .parameter-edit-form-actions {
     display: flex;
-    gap: 10px;
-    justify-content: flex-start;
+    gap: 8px;
+    justify-content: flex-end;
     
     .btn {
       padding: 8px 16px;
