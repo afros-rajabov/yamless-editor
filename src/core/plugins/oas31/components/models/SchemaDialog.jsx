@@ -822,7 +822,7 @@ const SchemaDialog = ({
                     )}
                     
                     {/* Content Media Type and Schema (only for string type) */}
-                    {currentProperty.type === "string" && currentProperty.isComposition == false && (
+                    {currentProperty.type === "string" && currentProperty.isComposition == false && !currentProperty.format && (
                       <div style={{ display: 'flex', gap: '15px', marginBottom: '12px' }}>
                         <div className="form-field" style={{ flex: 1 }}>
                           <label className="form-label">Content Media Type</label>
@@ -838,24 +838,6 @@ const SchemaDialog = ({
                             <option value="">None</option>
                             <option value="application/json">application/json</option>
                             <option value="application/xml">application/xml</option>
-                            <option value="application/octet-stream">application/octet-stream</option>
-                            <option value="text/plain">text/plain</option>
-                            <option value="text/html">text/html</option>
-                            <option value="text/css">text/css</option>
-                            <option value="text/javascript">text/javascript</option>
-                            <option value="image/png">image/png</option>
-                            <option value="image/jpeg">image/jpeg</option>
-                            <option value="image/gif">image/gif</option>
-                            <option value="image/svg+xml">image/svg+xml</option>
-                            <option value="image/webp">image/webp</option>
-                            <option value="multipart/form-data">multipart/form-data</option>
-                            <option value="application/x-www-form-urlencoded">application/x-www-form-urlencoded</option>
-                            <option value="application/pdf">application/pdf</option>
-                            <option value="application/zip">application/zip</option>
-                            <option value="audio/mpeg">audio/mpeg</option>
-                            <option value="audio/wav">audio/wav</option>
-                            <option value="video/mp4">video/mp4</option>
-                            <option value="video/quicktime">video/quicktime</option>
                           </select>
                         </div>
                         <div className="form-field" style={{ flex: 1 }}>
@@ -872,6 +854,7 @@ const SchemaDialog = ({
                             onSearchChange={setContentSchemaSearch}
                             isOpen={contentSchemaDropdownOpen}
                             onToggle={setContentSchemaDropdownOpen}
+                            disabled={!currentProperty.contentMediaType}
                             displayValue={currentProperty.contentSchema && currentProperty.contentSchema.includes(refPrefix) 
                               ? safeExtractSchemaName(currentProperty.contentSchema) 
                               : currentProperty.contentSchema || ""}
@@ -899,7 +882,12 @@ const SchemaDialog = ({
                           <select 
                             className="form-input" 
                             value={currentProperty.format} 
-                            onChange={(e) => setCurrentProperty({...currentProperty, format: e.target.value})}
+                            onChange={(e) => setCurrentProperty({
+                              ...currentProperty, 
+                              format: e.target.value,
+                              contentMediaType: "", // Clear contentMediaType when format is set
+                              contentSchema: "" // Clear contentSchema when format is set
+                            })}
                           >
                             <option value="">None</option>
                             {currentProperty.type === "string" && (
