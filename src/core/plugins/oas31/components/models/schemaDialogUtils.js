@@ -22,6 +22,64 @@ export const primitiveTypeOptions = [
 export const emptyPrimitiveOptions = []
 
 /**
+ * String format options for schema properties
+ */
+export const stringFormatOptions = [
+  { value: "date", label: "Date" },
+  { value: "date-time", label: "Date-Time" },
+  { value: "email", label: "Email" },
+  { value: "uri", label: "URI" },
+  { value: "uuid", label: "UUID" },
+  { value: "password", label: "Password" },
+  { value: "hostname", label: "Hostname" },
+  { value: "ipv4", label: "IPv4" },
+  { value: "ipv6", label: "IPv6" },
+  { value: "binary", label: "Binary" }
+]
+
+/**
+ * Number/Integer format options for schema properties
+ */
+export const numberFormatOptions = [
+  { value: "int32", label: "int32" },
+  { value: "int64", label: "int64" },
+  { value: "float", label: "Float" },
+  { value: "double", label: "Double" }
+]
+
+/**
+ * String format options for enum schemas (without binary)
+ */
+export const enumStringFormatOptions = [
+  { value: "date", label: "Date" },
+  { value: "date-time", label: "Date-Time" },
+  { value: "email", label: "Email" },
+  { value: "uri", label: "URI" },
+  { value: "uuid", label: "UUID" },
+  { value: "password", label: "Password" },
+  { value: "hostname", label: "Hostname" },
+  { value: "ipv4", label: "IPv4" },
+  { value: "ipv6", label: "IPv6" }
+]
+
+/**
+ * Composition type options
+ */
+export const compositionTypeOptions = [
+  { value: "anyOf", label: "anyOf (Union - any can match)" },
+  { value: "oneOf", label: "oneOf (Exclusive Union - exactly one must match)" },
+  { value: "allOf", label: "allOf (Intersection - all must match)" }
+]
+
+/**
+ * Content media type options
+ */
+export const contentMediaTypeOptions = [
+  { value: "application/json", label: "application/json" },
+  { value: "application/xml", label: "application/xml" }
+]
+
+/**
  * Extract composition schema names from an array of composition items
  * Handles schema references, primitive type objects, and direct primitive strings
  * @param {Array} compositionItems - Array of composition schema items
@@ -443,4 +501,32 @@ export const createSchemaOrReference = (schemaName) => {
   } else {
     return { $ref: `${refPrefix}${schemaName}` }
   }
+}
+
+/**
+ * Get schema options with ref prefix
+ * @param {string} searchTerm - The search term
+ * @param {object} schemas - The schemas object
+ * @param {string|null} excludeSchema - Optional schema name to exclude from results
+ * @returns {array} - Array of options with ref prefix
+ */
+export const getSchemaOptionsWithRef = (searchTerm, schemas, excludeSchema = null) => {
+  return filterSchemas(searchTerm, schemas, excludeSchema).map(schemaKey => ({
+    value: `${refPrefix}${schemaKey}`,
+    label: schemaKey
+  }))
+}
+
+/**
+ * Get schema options without ref prefix
+ * @param {string} searchTerm - The search term
+ * @param {object} schemas - The schemas object
+ * @param {string|null} excludeSchema - Optional schema name to exclude from results
+ * @returns {array} - Array of options without ref prefix
+ */
+export const getSchemaOptionsWithoutRef = (searchTerm, schemas, excludeSchema = null) => {
+  return filterSchemas(searchTerm, schemas, excludeSchema).map(schemaKey => ({
+    value: schemaKey,
+    label: schemaKey
+  }))
 }
