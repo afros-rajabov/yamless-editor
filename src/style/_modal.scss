@@ -152,7 +152,7 @@
         border-radius: 4px;
         margin-bottom: 5px;
 
-        button {
+        button:not(.btn-secondary) {
           background: #f44336;
           color: white;
           border: none;

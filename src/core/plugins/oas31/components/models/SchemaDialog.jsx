@@ -4,7 +4,6 @@
 import React, { useCallback, useState, useEffect } from "react"
 import PropTypes from "prop-types"
 import SearchableSelect from "./SearchableSelect"
-import PropertyCard from "./PropertyCard"
 import PropertyForm from "./PropertyForm"
 import { 
   safeExtractSchemaName, 
@@ -24,7 +23,9 @@ import {
 import {
   FormatSelect,
   CompositionTypeSelect,
-  SelectedSchemasList
+  SelectedSchemasList,
+  SelectedPropertiesList,
+  SelectedEnumValuesList
 } from "./SchemaDialogComponents"
 
 const SchemaDialog = ({
@@ -557,20 +558,17 @@ const SchemaDialog = ({
                   
                   {/* Added Properties List (Read-only) */}
                   {schemaData.properties.length > 0 && (
-                    <div className="added-properties">
-                      {schemaData.properties.map((property, index) => (
-                        <PropertyCard
-                          key={index}
-                          property={property}
-                          index={index}
-                          onRemove={(index) => {
-                            const newProperties = schemaData.properties.filter((_, i) => i !== index)
-                            setSchemaData({...schemaData, properties: newProperties})
-                          }}
-                          onEdit={isEditMode ? handleEditProperty : undefined}
-                          safeExtractSchemaName={safeExtractSchemaName}
-                        />
-                      ))}
+                    <div className="schema-selection">
+                      <SelectedPropertiesList
+                        properties={schemaData.properties}
+                        onRemove={(index) => {
+                          const newProperties = schemaData.properties.filter((_, i) => i !== index)
+                          setSchemaData({...schemaData, properties: newProperties})
+                        }}
+                        onEdit={isEditMode ? handleEditProperty : undefined}
+                        isEditMode={isEditMode}
+                        safeExtractSchemaName={safeExtractSchemaName}
+                      />
                     </div>
                   )}
                   
@@ -680,48 +678,17 @@ const SchemaDialog = ({
                   
                   {/* Added Enum Values List (Read-only) */}
                   {schemaData.enum.length > 0 && (
-                    <div className="added-enum-values">
-                      <h5>Added Enum Values:</h5>
-                      {schemaData.enum.map((enumItem, index) => (
-                        <div key={index} className="enum-value-card" style={{
-                          display: 'flex',
-                          justifyContent: 'space-between',
-                          alignItems: 'center',
-                          padding: '10px',
-                          margin: '5px 0',
-                          border: '1px solid #e0e0e0',
-                          borderRadius: '4px',
-                          backgroundColor: '#f9f9f9'
-                        }}>
-                          <div className="enum-value-info">
-                            <strong>"{typeof enumItem === 'string' ? enumItem : enumItem.toString()}"</strong>
-                            <span style={{ margin: '0 10px', color: '#666' }}>
-                              ({typeof enumItem === 'number' ? 'number' : 'string'})
-                            </span>
-                          </div>
-                          <div style={{ display: 'flex', gap: '8px' }}>
-                            {isEditMode && (
-                              <button 
-                                type="button" 
-                                className="btn btn-secondary btn-sm" 
-                                onClick={() => handleEditEnumValue(index)}
-                              >
-                                Edit
-                              </button>
-                            )}
-                            <button 
-                              type="button" 
-                              className="btn btn-danger btn-sm" 
-                              onClick={() => {
-                                const newEnum = schemaData.enum.filter((_, i) => i !== index)
-                                setSchemaData({...schemaData, enum: newEnum})
-                              }}
-                            >
-                              Remove
-                            </button>
-                          </div>
-                        </div>
-                      ))}
+                    <div className="schema-selection">
+                      <SelectedEnumValuesList
+                        enumValues={schemaData.enum}
+                        enumType={schemaData.enumType}
+                        onRemove={(index) => {
+                          const newEnum = schemaData.enum.filter((_, i) => i !== index)
+                          setSchemaData({...schemaData, enum: newEnum})
+                        }}
+                        onEdit={isEditMode ? handleEditEnumValue : undefined}
+                        isEditMode={isEditMode}
+                      />
                     </div>
                   )}
                   
