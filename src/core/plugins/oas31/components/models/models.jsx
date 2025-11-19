@@ -5,7 +5,6 @@ import React, { useCallback, useEffect, useState } from "react"
 import PropTypes from "prop-types"
 import classNames from "classnames"
 import SchemaDialog from "./SchemaDialog"
-import SchemaEditDialog from "./SchemaEditDialog"
 import { refPrefix } from "./schemaDialogUtils"
 
 const Models = ({
@@ -677,6 +676,15 @@ const Models = ({
         initialData={cloneInitialData}
         sourceSchemaName={cloneSourceName}
       />
+      <SchemaDialog
+        showDialog={showEditDialog}
+        onClose={closeEditDialog}
+        onUpdateSchema={handleUpdateSchema}
+        schemas={schemas}
+        getComponent={getComponent}
+        schemaName={editSchemaName}
+        schemaData={editSchemaData}
+      />
       {showDeleteDialog && (
         <div className="dialog-ux">
           <div className="backdrop-ux" onClick={cancelDeleteSchema}></div>
@@ -735,15 +743,6 @@ const Models = ({
           </div>
         </div>
       )}
-      <SchemaEditDialog
-        showDialog={showEditDialog}
-        onClose={closeEditDialog}
-        onUpdateSchema={handleUpdateSchema}
-        schemas={schemas}
-        getComponent={getComponent}
-        schemaName={editSchemaName}
-        schemaData={editSchemaData}
-      />
     </>
   )
 }
