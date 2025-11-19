@@ -45,7 +45,6 @@ const SchemaDialog = ({
   const [schemaNameState, setSchemaNameState] = useState("")
   const schemaName = isEditMode ? schemaNameProp : schemaNameState
   
-  const [schemaMode, setSchemaMode] = useState("BUILD") // "BUILD" or "COMPOSITE"
   const [schemaData, setSchemaData] = useState(getDefaultSchemaData())
   const [validationErrors, setValidationErrors] = useState({})
   const [currentProperty, setCurrentProperty] = useState(getDefaultPropertyData())
@@ -69,6 +68,9 @@ const SchemaDialog = ({
   const [editingPropertyIndex, setEditingPropertyIndex] = useState(null)
   const [editingEnumIndex, setEditingEnumIndex] = useState(null)
   
+  // Helper to check if current schema is a composition type
+  const isCompositionType = schemaData.type === "composition"
+  
   // Helper functions to get schema options with/without ref prefix, excluding current schema (only in edit mode)
   const getSchemaOptionsWithRefHelper = useCallback((searchTerm) => {
     return getSchemaOptionsWithRef(searchTerm, schemas, isEditMode ? schemaName : null)
@@ -85,11 +87,12 @@ const SchemaDialog = ({
       try {
         const parsedData = parseSchemaToDialogFormat(dataToUse)
         
-        // Determine mode based on schema structure
+        // Set type to "composition" if schema has composition keywords
         const hasComposition = dataToUse.anyOf || dataToUse.oneOf || dataToUse.allOf
-        const mode = hasComposition ? "COMPOSITE" : "BUILD"
+        if (hasComposition) {
+          parsedData.type = "composition"
+        }
         
-        setSchemaMode(mode)
         setSchemaData(parsedData)
         
         // Clear schema name for new schema (add mode only)
@@ -102,7 +105,6 @@ const SchemaDialog = ({
       } catch (error) {
         console.error('Error populating form with schema data:', error)
         // Reset to default state on error
-        setSchemaMode("BUILD")
         setSchemaData(getDefaultSchemaData())
         if (!isEditMode) {
           setSchemaNameState("")
@@ -118,7 +120,6 @@ const SchemaDialog = ({
     if (!isEditMode) {
       setSchemaNameState("")
     }
-    setSchemaMode("BUILD")
     setSchemaData(getDefaultSchemaData())
     setValidationErrors({})
     setCurrentProperty(getDefaultPropertyData())
@@ -181,14 +182,14 @@ const SchemaDialog = ({
     }
     
     // Validate enum schemas
-    if (schemaData.type === "enum" && schemaMode === "BUILD") {
+    if (schemaData.type === "enum" && !isCompositionType) {
       if (!schemaData.enum || schemaData.enum.length === 0) {
         errors.enum = "Enum schema must have at least one value"
       }
     }
     
     // Validate composition schemas
-    if (schemaMode === "COMPOSITE") {
+    if (isCompositionType) {
       if (!schemaData.compositionSchemas || schemaData.compositionSchemas.length === 0) {
         errors.compositionSchemas = "At least one schema must be selected for composition"
       }
@@ -196,7 +197,7 @@ const SchemaDialog = ({
     
     setValidationErrors(errors)
     return Object.keys(errors).length === 0
-  }, [schemaName, schemaData, schemas, schemaMode, isEditMode])
+  }, [schemaName, schemaData, schemas, isCompositionType, isEditMode])
   
   const handleAddProperty = useCallback(() => {
     // Validate current property
@@ -322,9 +323,11 @@ const SchemaDialog = ({
       processedSchemaData.default = []
     }
     
+    // Derive schemaMode from type for backward compatibility with handlers
+    const schemaMode = processedSchemaData.type === "composition" ? "COMPOSITE" : "BUILD"
     onAddSchema(schemaName.trim(), processedSchemaData, schemaMode)
     closeDialog()
-  }, [schemaName, schemaData, schemaMode, validateForm, onAddSchema, closeDialog])
+  }, [schemaName, schemaData, validateForm, onAddSchema, closeDialog])
 
   const handleUpdateSchema = useCallback(() => {
     if (!validateForm()) {
@@ -339,9 +342,11 @@ const SchemaDialog = ({
       processedSchemaData.default = []
     }
     
+    // Derive schemaMode from type for backward compatibility with handlers
+    const schemaMode = processedSchemaData.type === "composition" ? "COMPOSITE" : "BUILD"
     onUpdateSchema(processedSchemaData, schemaMode)
     closeDialog()
-  }, [schemaData, schemaMode, validateForm, onUpdateSchema, closeDialog])
+  }, [schemaData, validateForm, onUpdateSchema, closeDialog])
 
   const handleEditProperty = useCallback((index) => {
     const property = schemaData.properties[index]
@@ -446,94 +451,52 @@ const SchemaDialog = ({
                 </div>
               </div>
 
-              {/* Mode Switcher */}
-              <div className="form-section">
-                <h4>Schema Mode</h4>
-                <div className="mode-switcher" style={{ 
-                  display: 'flex', 
-                  marginBottom: '20px',
-                  border: '1px solid #dee2e6',
-                  borderRadius: '4px',
-                  overflow: 'hidden'
-                }}>
-                  <button 
-                    type="button"
-                    className="btn tab-switcher-btn"
-                    onClick={() => setSchemaMode("BUILD")}
-                    style={{ 
-                      flex: 1,
-                      backgroundColor: schemaMode === "BUILD" ? 'rgba(0, 0, 0, .051)' : '#ffffff',
-                      color: schemaMode === "BUILD" ? '#000000' : '#6c757d',
-                      border: 'none',
-                      borderRadius: 0,
-                      borderRight: '1px solid #dee2e6',
-                      margin: 0,
-                      transition: 'box-shadow 0.2s ease'
-                    }}
-                    onMouseEnter={(e) => {
-                      if (schemaMode !== "BUILD") {
-                        e.target.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.1)'
-                      }
-                    }}
-                    onMouseLeave={(e) => {
-                      e.target.style.boxShadow = 'none'
-                    }}
-                  >
-                    BUILD
-                  </button>
-                  <button 
-                    type="button"
-                    className="btn tab-switcher-btn"
-                    onClick={() => setSchemaMode("COMPOSITE")}
-                    style={{ 
-                      flex: 1,
-                      backgroundColor: schemaMode === "COMPOSITE" ? 'rgba(0, 0, 0, .051)' : '#ffffff',
-                      color: schemaMode === "COMPOSITE" ? '#000000' : '#6c757d',
-                      border: 'none',
-                      borderRadius: 0,
-                      margin: 0,
-                      transition: 'box-shadow 0.2s ease'
-                    }}
-                    onMouseEnter={(e) => {
-                      if (schemaMode !== "COMPOSITE") {
-                        e.target.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.1)'
-                      }
-                    }}
-                    onMouseLeave={(e) => {
-                      e.target.style.boxShadow = 'none'
-                    }}
-                  >
-                    COMPOSITE
-                  </button>
-                </div>
-              </div>
-
-              {/* BUILD Mode Content */}
-              {schemaMode === "BUILD" && (
+              {/* Schema Construct Selection */}
+              {(!isEditMode && !sourceSchemaName) && (
                 <div className="form-section">
-                  <h4>Schema Type</h4>
+                  <h4>Schema Construct</h4>
                   <div className="form-field">
-                    <label className="form-label" htmlFor="schema-type">Schema Type</label>
+                    {/* <label className="form-label" htmlFor="schema-type">Schema Construct</label> */}
                     <select 
                       className="form-input" 
                       id="schema-type" 
                       value={schemaData.type} 
-                      onChange={(e) => setSchemaData({...schemaData, type: e.target.value})}
+                      onChange={(e) => {
+                        const newType = e.target.value
+                        if (newType === "composition") {
+                          // Initialize composition data when switching to composition
+                          setSchemaData({
+                            ...schemaData, 
+                            type: newType,
+                            compositionType: schemaData.compositionType || "anyOf",
+                            compositionSchemas: schemaData.compositionSchemas || []
+                          })
+                        } else {
+                          // Clear composition data when switching away from composition
+                          setSchemaData({
+                            ...schemaData, 
+                            type: newType,
+                            compositionType: "anyOf",
+                            compositionSchemas: []
+                          })
+                        }
+                      }}
                     >
                       <option value="object">Object</option>
                       <option value="array">Array</option>
                       <option value="enum">Enum</option>
+                      <option value="composition">Composition</option>
                     </select>
                   </div>
                 </div>
               )}
 
-              {/* COMPOSITE Mode Content */}
-              {schemaMode === "COMPOSITE" && (
+              {/* Composition Content */}
+              {isCompositionType && (
                 <div className="form-section">
-                  <h4>Composition</h4>
+                  {(isEditMode || sourceSchemaName) && <h4>Composition</h4>}
                   <div className="form-field">
-                    <label className="form-label" htmlFor="composition-type">Composition Type</label>
+                    <label className="form-label" htmlFor="composition-type">Composition Type <span className="required">*</span></label>
                     <CompositionTypeSelect
                       id="composition-type"
                       value={schemaData.compositionType}
@@ -580,14 +543,13 @@ const SchemaDialog = ({
               )}
 
               {/* Section 2: Properties (for object type) */}
-              {schemaData.type === "object" && schemaMode === "BUILD" && (
+              {schemaData.type === "object" && !isCompositionType && (
                 <div className="form-section">
-                  <h4>Properties</h4>
+                  <h4>Object Properties</h4>
                   
                   {/* Added Properties List (Read-only) */}
                   {schemaData.properties.length > 0 && (
                     <div className="added-properties">
-                      <h5>Added Properties:</h5>
                       {schemaData.properties.map((property, index) => (
                         <PropertyCard
                           key={index}
@@ -856,14 +818,7 @@ const SchemaDialog = ({
                       </label>
                     </div>
                     
-                    <div style={{ display: 'flex', gap: '10px' }}>
-                      <button 
-                        type="button" 
-                        className="btn btn-primary" 
-                        onClick={handleAddProperty}
-                      >
-                        {editingPropertyIndex !== null ? 'Update Property' : 'Add Property'}
-                      </button>
+                    <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
                       {editingPropertyIndex !== null && (
                         <button 
                           type="button" 
@@ -873,15 +828,22 @@ const SchemaDialog = ({
                           Cancel Edit
                         </button>
                       )}
+                      <button 
+                        type="button" 
+                        className="btn btn-primary" 
+                        onClick={handleAddProperty}
+                      >
+                        {editingPropertyIndex !== null ? 'Update Property' : 'Add Property'}
+                      </button>
                     </div>
                   </div>
                 </div>
               )}
 
               {/* Section 3: Array Items (for array type) */}
-              {schemaData.type === "array" && schemaMode === "BUILD" && (
+              {schemaData.type === "array" && !isCompositionType && (
                 <div className="form-section">
-                  <h4>Array Items</h4>
+                  {(isEditMode || sourceSchemaName) && <h4>Array</h4>}
                   
                   <div className="form-field">
                     <label className="form-label">Items Type <span className="required">*</span></label>
@@ -906,9 +868,9 @@ const SchemaDialog = ({
               )}
 
               {/* Section 4: Enum Values (for enum type) */}
-              {schemaData.type === "enum" && schemaMode === "BUILD" && (
+              {schemaData.type === "enum" && !isCompositionType && (
                 <div className="form-section">
-                  <h4>Enum Values</h4>
+                  {(isEditMode || sourceSchemaName) && <h4>Enum</h4>}
                   
                   {/* Enum Type and Format Selection */}
                   <div style={{ display: 'flex', gap: '15px', marginBottom: '20px' }}>
@@ -918,23 +880,13 @@ const SchemaDialog = ({
                         className="form-input" 
                         value={schemaData.enumType} 
                         onChange={(e) => setSchemaData({...schemaData, enumType: e.target.value, enumFormat: ""})}
-                        disabled={isEditMode}
-                        style={isEditMode ? { backgroundColor: '#f5f5f5', cursor: 'not-allowed' } : {}}
+                        disabled={isEditMode || sourceSchemaName}
+                        style={isEditMode || sourceSchemaName ? { backgroundColor: '#f5f5f5', cursor: 'not-allowed' } : {}}
                       >
                         <option value="string">String</option>
                         <option value="number">Number</option>
                         <option value="integer">Integer</option>
                       </select>
-                    </div>
-                    
-                    <div className="form-field" style={{ flex: 1 }}>
-                      <label className="form-label">Format</label>
-                      <FormatSelect
-                        type={schemaData.enumType}
-                        value={schemaData.enumFormat}
-                        onChange={(e) => setSchemaData({...schemaData, enumFormat: e.target.value})}
-                        includeBinary={false}
-                      />
                     </div>
                   </div>
                   
