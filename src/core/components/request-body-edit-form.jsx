@@ -12,6 +12,7 @@ import {
   isSchemaReference,
   extractSchemaName
 } from "core/utils/parameter-utils"
+import { checkboxLabelStyle, checkboxInputStyle } from "core/utils/form-styles"
 
     // Allowed content types
 const allowedContentTypes = [
@@ -320,9 +321,10 @@ export default class RequestBodyEditForm extends Component {
           </div>
 
           <div className="form-field">
-            <label className="form-checkbox">
+            <label className="form-checkbox" style={checkboxLabelStyle}>
               <input
                 type="checkbox"
+                style={checkboxInputStyle}
                 checked={required}
                 onChange={(e) => this.handleInputChange("required", e.target.checked)}
               />

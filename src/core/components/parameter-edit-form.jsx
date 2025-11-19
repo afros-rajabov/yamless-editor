@@ -15,6 +15,7 @@ import {
   isSchemaReference,
   extractSchemaName
 } from "core/utils/parameter-utils"
+import { checkboxLabelStyle, checkboxInputStyle } from "core/utils/form-styles"
 
 export default class ParameterEditForm extends Component {
   static propTypes = {
@@ -369,9 +370,10 @@ export default class ParameterEditForm extends Component {
           )}
 
           <div className="form-field">
-            <label className="form-checkbox">
+            <label className="form-checkbox" style={checkboxLabelStyle}>
               <input
                 type="checkbox"
+                style={checkboxInputStyle}
                 checked={formData.required}
                 onChange={(e) => this.handleInputChange("required", e.target.checked)}
               />

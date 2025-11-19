@@ -28,6 +28,7 @@ import {
   SelectedPropertiesList,
   SelectedEnumValuesList
 } from "./SchemaDialogComponents"
+import { checkboxLabelStyle, checkboxInputStyle } from "core/utils/form-styles"
 
 const SchemaDialog = ({
   showDialog,
@@ -392,14 +393,6 @@ const SchemaDialog = ({
     setShowPropertyForm(false)
   }, [])
 
-  
-  // Reusable styles for checkboxes
-  const checkboxLabelStyle = { display: 'flex', alignItems: 'center', gap: '8px' }
-  const checkboxInputStyle = { 
-    width: '16px', 
-    height: '16px', 
-    cursor: 'pointer' 
-  }
   
   const CloseIcon = getComponent("CloseIcon")
   const Button = getComponent("Button")
