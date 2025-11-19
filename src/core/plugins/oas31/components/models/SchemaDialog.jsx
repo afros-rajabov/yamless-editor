@@ -1,7 +1,7 @@
 /**
  * @prettier
  */
-import React, { useCallback, useState, useRef, useEffect } from "react"
+import React, { useCallback, useState, useEffect } from "react"
 import PropTypes from "prop-types"
 import SearchableSelect from "./SearchableSelect"
 import PropertyCard from "./PropertyCard"
@@ -15,8 +15,16 @@ import {
   createSchemaOrReference,
   refPrefix,
   primitiveTypeOptions,
-  emptyPrimitiveOptions
+  emptyPrimitiveOptions,
+  getSchemaOptionsWithRef,
+  getSchemaOptionsWithoutRef,
+  contentMediaTypeOptions
 } from "./schemaDialogUtils"
+import {
+  FormatSelect,
+  CompositionTypeSelect,
+  SelectedSchemasList
+} from "./SchemaDialogComponents"
 
 const SchemaDialog = ({
   showDialog,
@@ -62,18 +70,12 @@ const SchemaDialog = ({
   const [editingEnumIndex, setEditingEnumIndex] = useState(null)
   
   // Helper functions to get schema options with/without ref prefix, excluding current schema (only in edit mode)
-  const getSchemaOptionsWithRef = useCallback((searchTerm) => {
-    return filterSchemas(searchTerm, schemas, isEditMode ? schemaName : null).map(schemaKey => ({
-      value: `${refPrefix}${schemaKey}`,
-      label: schemaKey
-    }))
+  const getSchemaOptionsWithRefHelper = useCallback((searchTerm) => {
+    return getSchemaOptionsWithRef(searchTerm, schemas, isEditMode ? schemaName : null)
   }, [schemas, schemaName, isEditMode])
   
-  const getSchemaOptionsWithoutRef = useCallback((searchTerm) => {
-    return filterSchemas(searchTerm, schemas, isEditMode ? schemaName : null).map(schemaKey => ({
-      value: schemaKey,
-      label: schemaKey
-    }))
+  const getSchemaOptionsWithoutRefHelper = useCallback((searchTerm) => {
+    return getSchemaOptionsWithoutRef(searchTerm, schemas, isEditMode ? schemaName : null)
   }, [schemas, schemaName, isEditMode])
   
   // Effect to populate form when initialData (add mode) or schemaData (edit mode) is provided
@@ -532,37 +534,23 @@ const SchemaDialog = ({
                   <h4>Composition</h4>
                   <div className="form-field">
                     <label className="form-label" htmlFor="composition-type">Composition Type</label>
-                    <select 
-                      className="form-input" 
-                      id="composition-type" 
-                      value={schemaData.compositionType} 
+                    <CompositionTypeSelect
+                      id="composition-type"
+                      value={schemaData.compositionType}
                       onChange={(e) => setSchemaData({...schemaData, compositionType: e.target.value})}
-                    >
-                      <option value="anyOf">anyOf (Union - any can match)</option>
-                      <option value="oneOf">oneOf (Exclusive Union - exactly one must match)</option>
-                      <option value="allOf">allOf (Intersection - all must match)</option>
-                    </select>
+                    />
                   </div>
                   
                   <div className="form-field">
                     <label className="form-label">Member Schemas</label>
                     <div className="schema-selection">
-                      <div className="selected-schemas">
-                        {schemaData.compositionSchemas.map((schema, index) => (
-                          <div key={index} className="selected-schema">
-                            {schema}
-                            <button 
-                              type="button" 
-                              onClick={() => setSchemaData({
-                                ...schemaData, 
-                                compositionSchemas: schemaData.compositionSchemas.filter((_, i) => i !== index)
-                              })}
-                            >
-                              Remove
-                            </button>
-                          </div>
-                        ))}
-                      </div>
+                      <SelectedSchemasList
+                        schemas={schemaData.compositionSchemas}
+                        onRemove={(index) => setSchemaData({
+                          ...schemaData, 
+                          compositionSchemas: schemaData.compositionSchemas.filter((_, i) => i !== index)
+                        })}
+                      />
                       <SearchableSelect
                         value=""
                         onChange={(value) => {
@@ -580,11 +568,8 @@ const SchemaDialog = ({
                         onToggle={setCompositionDropdownOpen}
                         primitiveOptions={emptyPrimitiveOptions}
                         options={isEditMode 
-                          ? getSchemaOptionsWithoutRef(compositionSchemaSearch)
-                          : filterSchemas(compositionSchemaSearch, schemas).map(schemaKey => ({
-                              value: schemaKey,
-                              label: schemaKey
-                            }))}
+                          ? getSchemaOptionsWithoutRefHelper(compositionSchemaSearch)
+                          : getSchemaOptionsWithoutRef(compositionSchemaSearch, schemas)}
                       />
                     </div>
                     {validationErrors.compositionSchemas && (
@@ -678,11 +663,8 @@ const SchemaDialog = ({
                             : currentProperty.type}
                           primitiveOptions={primitiveTypeOptions}
                           options={isEditMode 
-                            ? getSchemaOptionsWithRef(propertyTypeSearch)
-                            : filterSchemas(propertyTypeSearch, schemas).map(schemaKey => ({
-                                value: `${refPrefix}${schemaKey}`,
-                                label: schemaKey
-                              }))}
+                            ? getSchemaOptionsWithRefHelper(propertyTypeSearch)
+                            : getSchemaOptionsWithRef(propertyTypeSearch, schemas)}
                         />
                       </div>
                     </div>
@@ -693,36 +675,22 @@ const SchemaDialog = ({
                       <>
                         <div className="form-field" style={{ marginBottom: '12px' }}>
                           <label className="form-label">Composition Type <span className="required">*</span></label>
-                          <select 
-                            className="form-input" 
-                            value={currentProperty.compositionType} 
+                          <CompositionTypeSelect
+                            value={currentProperty.compositionType}
                             onChange={(e) => setCurrentProperty({...currentProperty, compositionType: e.target.value})}
-                          >
-                            <option value="anyOf">anyOf (Union - any can match)</option>
-                            <option value="oneOf">oneOf (Exclusive Union - exactly one must match)</option>
-                            <option value="allOf">allOf (Intersection - all must match)</option>
-                          </select>
+                          />
                         </div>
                         
                         <div className="form-field">
                           <label className="form-label">Member Schemas/Types<span className="required">*</span></label>
                           <div className="schema-selection">
-                            <div className="selected-schemas">
-                              {currentProperty.compositionSchemas.map((schema, index) => (
-                                <div key={index} className="selected-schema">
-                                  {schema}
-                                  <button 
-                                    type="button" 
-                                    onClick={() => setCurrentProperty({
-                                      ...currentProperty, 
-                                      compositionSchemas: currentProperty.compositionSchemas.filter((_, i) => i !== index)
-                                    })}
-                                  >
-                                    Remove
-                                  </button>
-                                </div>
-                              ))}
-                            </div>
+                            <SelectedSchemasList
+                              schemas={currentProperty.compositionSchemas}
+                              onRemove={(index) => setCurrentProperty({
+                                ...currentProperty, 
+                                compositionSchemas: currentProperty.compositionSchemas.filter((_, i) => i !== index)
+                              })}
+                            />
                             <SearchableSelect
                               value=""
                               onChange={(value) => {
@@ -740,11 +708,8 @@ const SchemaDialog = ({
                               onToggle={setCompositionDropdownOpen}
                               primitiveOptions={primitiveTypeOptions}
                               options={isEditMode 
-                                ? getSchemaOptionsWithoutRef(compositionSchemaSearch)
-                                : filterSchemas(compositionSchemaSearch, schemas).map(schemaKey => ({
-                                    value: schemaKey,
-                                    label: schemaKey
-                                  }))}
+                                ? getSchemaOptionsWithoutRefHelper(compositionSchemaSearch)
+                                : getSchemaOptionsWithoutRef(compositionSchemaSearch, schemas)}
                             />
                           </div>
                           {validationErrors.compositionSchemas && (
@@ -772,12 +737,9 @@ const SchemaDialog = ({
                               ? safeExtractSchemaName(currentProperty.itemsType) 
                               : currentProperty.itemsType}
                             primitiveOptions={primitiveTypeOptions}
-                            options={isEditMode 
-                              ? getSchemaOptionsWithRef(propertyItemsTypeSearch)
-                              : filterSchemas(propertyItemsTypeSearch, schemas).map(schemaKey => ({
-                                  value: `${refPrefix}${schemaKey}`,
-                                  label: schemaKey
-                                }))}
+                              options={isEditMode 
+                                ? getSchemaOptionsWithRefHelper(propertyItemsTypeSearch)
+                                : getSchemaOptionsWithRef(propertyItemsTypeSearch, schemas)}
                           />
                         </div>
                         {currentProperty.itemsType && 
@@ -787,35 +749,12 @@ const SchemaDialog = ({
                           currentProperty.itemsType === "integer") && (
                           <div className="form-field" style={{ marginBottom: '12px' }}>
                             <label className="form-label">Items Format</label>
-                            <select 
-                              className="form-input" 
-                              value={currentProperty.itemsFormat} 
+                            <FormatSelect
+                              type={currentProperty.itemsType}
+                              value={currentProperty.itemsFormat}
                               onChange={(e) => setCurrentProperty({...currentProperty, itemsFormat: e.target.value})}
-                            >
-                              <option value="">None</option>
-                              {currentProperty.itemsType === "string" && (
-                                <>
-                                  <option value="date">Date</option>
-                                  <option value="date-time">Date-Time</option>
-                                  <option value="email">Email</option>
-                                  <option value="uri">URI</option>
-                                  <option value="uuid">UUID</option>
-                                  <option value="password">Password</option>
-                                  <option value="hostname">Hostname</option>
-                                  <option value="ipv4">IPv4</option>
-                                  <option value="ipv6">IPv6</option>
-                                  <option value="binary">Binary</option>
-                                </>
-                              )}
-                              {(currentProperty.itemsType === "number" || currentProperty.itemsType === "integer") && (
-                                <>
-                                  <option value="int32">int32</option>
-                                  <option value="int64">int64</option>
-                                  <option value="float">Float</option>
-                                  <option value="double">Double</option>
-                                </>
-                              )}
-                            </select>
+                              includeBinary={true}
+                            />
                           </div>
                         )}
                       </>
@@ -836,8 +775,11 @@ const SchemaDialog = ({
                             })}
                           >
                             <option value="">None</option>
-                            <option value="application/json">application/json</option>
-                            <option value="application/xml">application/xml</option>
+                            {contentMediaTypeOptions.map(option => (
+                              <option key={option.value} value={option.value}>
+                                {option.label}
+                              </option>
+                            ))}
                           </select>
                         </div>
                         <div className="form-field" style={{ flex: 1 }}>
@@ -860,11 +802,8 @@ const SchemaDialog = ({
                               : currentProperty.contentSchema || ""}
                             primitiveOptions={emptyPrimitiveOptions}
                             options={isEditMode 
-                              ? getSchemaOptionsWithRef(contentSchemaSearch)
-                              : filterSchemas(contentSchemaSearch, schemas).map(schemaKey => ({
-                                  value: `${refPrefix}${schemaKey}`,
-                                  label: schemaKey
-                                }))}
+                              ? getSchemaOptionsWithRefHelper(contentSchemaSearch)
+                              : getSchemaOptionsWithRef(contentSchemaSearch, schemas)}
                           />
                         </div>
                       </div>
@@ -879,40 +818,17 @@ const SchemaDialog = ({
                        !currentProperty.contentSchema && (
                         <div className="form-field" style={{ flex: 1 }}>
                           <label className="form-label">Format</label>
-                          <select 
-                            className="form-input" 
-                            value={currentProperty.format} 
+                          <FormatSelect
+                            type={currentProperty.type}
+                            value={currentProperty.format}
                             onChange={(e) => setCurrentProperty({
                               ...currentProperty, 
                               format: e.target.value,
                               contentMediaType: "", // Clear contentMediaType when format is set
                               contentSchema: "" // Clear contentSchema when format is set
                             })}
-                          >
-                            <option value="">None</option>
-                            {currentProperty.type === "string" && (
-                              <>
-                                <option value="date">Date</option>
-                                <option value="date-time">Date-Time</option>
-                                <option value="email">Email</option>
-                                <option value="uri">URI</option>
-                                <option value="uuid">UUID</option>
-                                <option value="password">Password</option>
-                                <option value="hostname">Hostname</option>
-                                <option value="ipv4">IPv4</option>
-                                <option value="ipv6">IPv6</option>
-                                <option value="binary">Binary</option>
-                              </>
-                            )}
-                            {(currentProperty.type === "number" || currentProperty.type === "integer") && (
-                              <>
-                                <option value="int32">int32</option>
-                                <option value="int64">int64</option>
-                                <option value="float">Float</option>
-                                <option value="double">Double</option>
-                              </>
-                            )}
-                          </select>
+                            includeBinary={true}
+                          />
                         </div>
                       )}
                       
@@ -982,11 +898,8 @@ const SchemaDialog = ({
                         : schemaData.itemsType}
                       primitiveOptions={primitiveTypeOptions}
                       options={isEditMode 
-                        ? getSchemaOptionsWithRef(itemsTypeSearch)
-                        : filterSchemas(itemsTypeSearch, schemas).map(schemaKey => ({
-                            value: `${refPrefix}${schemaKey}`,
-                            label: schemaKey
-                          }))}
+                        ? getSchemaOptionsWithRefHelper(itemsTypeSearch)
+                        : getSchemaOptionsWithRef(itemsTypeSearch, schemas)}
                     />
                   </div>
                 </div>
@@ -1016,34 +929,12 @@ const SchemaDialog = ({
                     
                     <div className="form-field" style={{ flex: 1 }}>
                       <label className="form-label">Format</label>
-                      <select 
-                        className="form-input" 
-                        value={schemaData.enumFormat} 
+                      <FormatSelect
+                        type={schemaData.enumType}
+                        value={schemaData.enumFormat}
                         onChange={(e) => setSchemaData({...schemaData, enumFormat: e.target.value})}
-                      >
-                        <option value="">None</option>
-                        {schemaData.enumType === "string" && (
-                          <>
-                            <option value="date">Date</option>
-                            <option value="date-time">Date-Time</option>
-                            <option value="email">Email</option>
-                            <option value="uri">URI</option>
-                            <option value="uuid">UUID</option>
-                            <option value="password">Password</option>
-                            <option value="hostname">Hostname</option>
-                            <option value="ipv4">IPv4</option>
-                            <option value="ipv6">IPv6</option>
-                          </>
-                        )}
-                        {(schemaData.enumType === "number" || schemaData.enumType === "integer") && (
-                          <>
-                            <option value="int32">int32</option>
-                            <option value="int64">int64</option>
-                            <option value="float">Float</option>
-                            <option value="double">Double</option>
-                          </>
-                        )}
-                      </select>
+                        includeBinary={false}
+                      />
                     </div>
                   </div>
                   
