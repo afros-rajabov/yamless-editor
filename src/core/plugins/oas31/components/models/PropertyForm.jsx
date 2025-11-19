@@ -6,6 +6,7 @@ import PropTypes from "prop-types"
 import SearchableSelect from "./SearchableSelect"
 import {
   safeExtractSchemaName,
+  getSchemaTitleFromRef,
   refPrefix,
   primitiveTypeOptions,
   emptyPrimitiveOptions,
@@ -106,7 +107,7 @@ const PropertyForm = ({
             onToggle={setPropertyDropdownOpen}
             disabled={currentProperty.isComposition || editingPropertyIndex !== null}
             displayValue={currentProperty.type.includes(refPrefix) 
-              ? safeExtractSchemaName(currentProperty.type) 
+              ? getSchemaTitleFromRef(currentProperty.type, schemas) 
               : currentProperty.type}
             primitiveOptions={primitiveTypeOptions}
             options={isEditMode 
@@ -137,6 +138,7 @@ const PropertyForm = ({
                   ...currentProperty, 
                   compositionSchemas: currentProperty.compositionSchemas.filter((_, i) => i !== index)
                 })}
+                schemasObject={schemas}
               />
               <SearchableSelect
                 value=""
@@ -181,7 +183,7 @@ const PropertyForm = ({
               isOpen={propertyItemsDropdownOpen}
               onToggle={setPropertyItemsDropdownOpen}
               displayValue={currentProperty.itemsType.includes(refPrefix) 
-                ? safeExtractSchemaName(currentProperty.itemsType) 
+                ? getSchemaTitleFromRef(currentProperty.itemsType, schemas) 
                 : currentProperty.itemsType}
               primitiveOptions={primitiveTypeOptions}
                 options={isEditMode 
@@ -245,7 +247,7 @@ const PropertyForm = ({
               onToggle={setContentSchemaDropdownOpen}
               disabled={!currentProperty.contentMediaType}
               displayValue={currentProperty.contentSchema && currentProperty.contentSchema.includes(refPrefix) 
-                ? safeExtractSchemaName(currentProperty.contentSchema) 
+                ? getSchemaTitleFromRef(currentProperty.contentSchema, schemas) 
                 : currentProperty.contentSchema || ""}
               primitiveOptions={emptyPrimitiveOptions}
               options={isEditMode 

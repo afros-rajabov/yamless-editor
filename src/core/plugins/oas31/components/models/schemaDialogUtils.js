@@ -115,6 +115,34 @@ export const extractCompositionSchemas = (compositionItems) => {
  * @param {string} ref - The reference string
  * @returns {string} - The extracted schema name
  */
+/**
+ * Get schema title from a reference, with fallback to sanitized key
+ * @param {string} ref - The reference string
+ * @param {object} schemas - The schemas object
+ * @returns {string} - The schema title or sanitized key
+ */
+export const getSchemaTitleFromRef = (ref, schemas = {}) => {
+  try {
+    if (!ref || typeof ref !== 'string') {
+      return ref || ''
+    }
+    // Extract schema name from the end of the reference
+    const parts = ref.split('/')
+    const schemaKey = parts[parts.length - 1] || ''
+    
+    // If schemas object is provided, try to get the title
+    if (schemas && schemas[schemaKey]) {
+      return schemas[schemaKey].title || schemaKey
+    }
+    
+    // Fallback to the key
+    return schemaKey
+  } catch (e) {
+    console.warn('Error extracting schema title from reference:', ref, e)
+    return ref || ''
+  }
+}
+
 export const safeExtractSchemaName = (ref) => {
   try {
     if (!ref || typeof ref !== 'string') {
@@ -513,7 +541,7 @@ export const createSchemaOrReference = (schemaName) => {
 export const getSchemaOptionsWithRef = (searchTerm, schemas, excludeSchema = null) => {
   return filterSchemas(searchTerm, schemas, excludeSchema).map(schemaKey => ({
     value: `${refPrefix}${schemaKey}`,
-    label: schemaKey
+    label: schemas[schemaKey]?.title || schemaKey
   }))
 }
 
@@ -527,6 +555,6 @@ export const getSchemaOptionsWithRef = (searchTerm, schemas, excludeSchema = nul
 export const getSchemaOptionsWithoutRef = (searchTerm, schemas, excludeSchema = null) => {
   return filterSchemas(searchTerm, schemas, excludeSchema).map(schemaKey => ({
     value: schemaKey,
-    label: schemaKey
+    label: schemas[schemaKey]?.title || schemaKey
   }))
 }

@@ -6,7 +6,8 @@ import PropTypes from "prop-types"
 import SearchableSelect from "./SearchableSelect"
 import PropertyForm from "./PropertyForm"
 import { 
-  safeExtractSchemaName, 
+  safeExtractSchemaName,
+  getSchemaTitleFromRef,
   parseSchemaToDialogFormat, 
   filterSchemas, 
   getDefaultSchemaData, 
@@ -416,7 +417,7 @@ const SchemaDialog = ({
             <div className="modal-ux-header">
               <h3>
                 {isEditMode 
-                  ? `Edit Schema: ${schemaName}` 
+                  ? `Edit Schema: ${schemaDataProp?.title || schemaName}` 
                   : sourceSchemaName 
                     ? `Clone Schema from ${sourceSchemaName}` 
                     : "Add Schema"}
@@ -522,6 +523,7 @@ const SchemaDialog = ({
                           ...schemaData, 
                           compositionSchemas: schemaData.compositionSchemas.filter((_, i) => i !== index)
                         })}
+                        schemasObject={schemas}
                       />
                       <SearchableSelect
                         value=""
@@ -568,6 +570,7 @@ const SchemaDialog = ({
                         onEdit={isEditMode ? handleEditProperty : undefined}
                         isEditMode={isEditMode}
                         safeExtractSchemaName={safeExtractSchemaName}
+                        schemas={schemas}
                       />
                     </div>
                   )}
@@ -642,7 +645,7 @@ const SchemaDialog = ({
                       isOpen={itemsDropdownOpen}
                       onToggle={setItemsDropdownOpen}
                       displayValue={schemaData.itemsType.includes(refPrefix) 
-                        ? safeExtractSchemaName(schemaData.itemsType) 
+                        ? getSchemaTitleFromRef(schemaData.itemsType, schemas) 
                         : schemaData.itemsType}
                       primitiveOptions={primitiveTypeOptions}
                       options={isEditMode 
