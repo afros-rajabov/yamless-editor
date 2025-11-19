@@ -22,12 +22,21 @@ const SchemaDialog = ({
   showDialog,
   onClose,
   onAddSchema,
+  onUpdateSchema,
   schemas,
   getComponent,
   initialData = null,
-  sourceSchemaName = null
+  sourceSchemaName = null,
+  schemaName: schemaNameProp = null,
+  schemaData: schemaDataProp = null
 }) => {
-  const [schemaName, setSchemaName] = useState("")
+  // Determine mode: edit mode if schemaName and schemaData are provided as props, and onUpdateSchema exists
+  const isEditMode = !!(schemaNameProp && schemaDataProp && onUpdateSchema)
+  
+  // Schema name: state in add mode, prop in edit mode
+  const [schemaNameState, setSchemaNameState] = useState("")
+  const schemaName = isEditMode ? schemaNameProp : schemaNameState
+  
   const [schemaMode, setSchemaMode] = useState("BUILD") // "BUILD" or "COMPOSITE"
   const [schemaData, setSchemaData] = useState(getDefaultSchemaData())
   const [validationErrors, setValidationErrors] = useState({})
@@ -48,42 +57,65 @@ const SchemaDialog = ({
   const [propertyItemsDropdownOpen, setPropertyItemsDropdownOpen] = useState(false)
   const [contentSchemaDropdownOpen, setContentSchemaDropdownOpen] = useState(false)
   
+  // Edit states (only used in edit mode)
+  const [editingPropertyIndex, setEditingPropertyIndex] = useState(null)
+  const [editingEnumIndex, setEditingEnumIndex] = useState(null)
   
+  // Helper functions to get schema options with/without ref prefix, excluding current schema (only in edit mode)
+  const getSchemaOptionsWithRef = useCallback((searchTerm) => {
+    return filterSchemas(searchTerm, schemas, isEditMode ? schemaName : null).map(schemaKey => ({
+      value: `${refPrefix}${schemaKey}`,
+      label: schemaKey
+    }))
+  }, [schemas, schemaName, isEditMode])
   
+  const getSchemaOptionsWithoutRef = useCallback((searchTerm) => {
+    return filterSchemas(searchTerm, schemas, isEditMode ? schemaName : null).map(schemaKey => ({
+      value: schemaKey,
+      label: schemaKey
+    }))
+  }, [schemas, schemaName, isEditMode])
   
-  // Effect to populate form when initialData is provided
+  // Effect to populate form when initialData (add mode) or schemaData (edit mode) is provided
   useEffect(() => {
-    if (initialData && showDialog) {
+    const dataToUse = isEditMode ? schemaDataProp : initialData
+    if (dataToUse && showDialog) {
       try {
-        const parsedData = parseSchemaToDialogFormat(initialData)
+        const parsedData = parseSchemaToDialogFormat(dataToUse)
         
         // Determine mode based on schema structure
-        const hasComposition = initialData.anyOf || initialData.oneOf || initialData.allOf
+        const hasComposition = dataToUse.anyOf || dataToUse.oneOf || dataToUse.allOf
         const mode = hasComposition ? "COMPOSITE" : "BUILD"
         
         setSchemaMode(mode)
         setSchemaData(parsedData)
         
-        // Clear schema name for new schema
-        setSchemaName("")
+        // Clear schema name for new schema (add mode only)
+        if (!isEditMode) {
+          setSchemaNameState("")
+        }
         
         // Clear validation errors
         setValidationErrors({})
       } catch (error) {
-        console.error('Error populating form with initial data:', error)
+        console.error('Error populating form with schema data:', error)
         // Reset to default state on error
         setSchemaMode("BUILD")
         setSchemaData(getDefaultSchemaData())
-        setSchemaName("")
+        if (!isEditMode) {
+          setSchemaNameState("")
+        }
         setValidationErrors({})
       }
     }
-  }, [initialData, showDialog, parseSchemaToDialogFormat])
+  }, [initialData, schemaDataProp, showDialog, isEditMode])
   
 
 
   const resetForm = useCallback(() => {
-    setSchemaName("")
+    if (!isEditMode) {
+      setSchemaNameState("")
+    }
     setSchemaMode("BUILD")
     setSchemaData(getDefaultSchemaData())
     setValidationErrors({})
@@ -99,7 +131,9 @@ const SchemaDialog = ({
     setCompositionDropdownOpen(false)
     setPropertyItemsDropdownOpen(false)
     setContentSchemaDropdownOpen(false)
-  }, [])
+    setEditingPropertyIndex(null)
+    setEditingEnumIndex(null)
+  }, [isEditMode])
 
   const closeDialog = useCallback(() => {
     resetForm()
@@ -109,11 +143,13 @@ const SchemaDialog = ({
   const validateForm = useCallback(() => {
     const errors = {}
     
-    // Validate schema name
-    if (!schemaName.trim()) {
-      errors.schemaName = "Schema name is required"
-    } else if (schemas[schemaName.trim()]) {
-      errors.schemaName = "Schema name already exists"
+    // Validate schema name (only in add mode)
+    if (!isEditMode) {
+      if (!schemaName.trim()) {
+        errors.schemaName = "Schema name is required"
+      } else if (schemas[schemaName.trim()]) {
+        errors.schemaName = "Schema name already exists"
+      }
     }
     
     // Validate numeric constraints
@@ -158,7 +194,7 @@ const SchemaDialog = ({
     
     setValidationErrors(errors)
     return Object.keys(errors).length === 0
-  }, [schemaName, schemaData, schemas, schemaMode])
+  }, [schemaName, schemaData, schemas, schemaMode, isEditMode])
   
   const handleAddProperty = useCallback(() => {
     // Validate current property
@@ -169,7 +205,7 @@ const SchemaDialog = ({
     
     // Check for duplicate property names
     const existingProperty = schemaData.properties.find(prop => prop.name === currentProperty.name.trim())
-    if (existingProperty) {
+    if (existingProperty && editingPropertyIndex === null) {
       setValidationErrors({ propertyName: "Property name already exists" })
       return
     }
@@ -185,7 +221,7 @@ const SchemaDialog = ({
     // Clear any previous property validation errors
     setValidationErrors(prev => ({ ...prev, propertyName: undefined, compositionSchemas: undefined }))
     
-    // Add property to schema data
+    // Add or update property to schema data
     const newProperty = {
       name: currentProperty.name.trim(),
       required: currentProperty.required,
@@ -208,14 +244,25 @@ const SchemaDialog = ({
       newProperty.type = currentProperty.type
     }
     
+    let updatedProperties
+    if (editingPropertyIndex !== null) {
+      // Update existing property
+      updatedProperties = [...schemaData.properties]
+      updatedProperties[editingPropertyIndex] = newProperty
+    } else {
+      // Add new property
+      updatedProperties = [...schemaData.properties, newProperty]
+    }
+    
     setSchemaData({
       ...schemaData,
-      properties: [...schemaData.properties, newProperty]
+      properties: updatedProperties
     })
     
     // Reset form
     setCurrentProperty(getDefaultPropertyData())
-  }, [currentProperty, schemaData])
+    setEditingPropertyIndex(null)
+  }, [currentProperty, schemaData, editingPropertyIndex])
 
   const handleAddEnumValue = useCallback(() => {
     // Validate current enum value
@@ -229,7 +276,7 @@ const SchemaDialog = ({
       const currentValue = (schemaData.enumType === "number" || schemaData.enumType === "integer") ? parseFloat(currentEnumValue.value) : currentEnumValue.value.trim()
       return enumItem === currentValue
     })
-    if (existingValue) {
+    if (existingValue && editingEnumIndex === null) {
       setValidationErrors({ enumValue: "Enum value already exists" })
       return
     }
@@ -237,17 +284,28 @@ const SchemaDialog = ({
     // Clear any previous enum validation errors
     setValidationErrors(prev => ({ ...prev, enumValue: undefined }))
     
-    // Add enum value to schema data
+    // Add or update enum value to schema data
     const newValue = (schemaData.enumType === "number" || schemaData.enumType === "integer") ? parseFloat(currentEnumValue.value) : currentEnumValue.value.trim()
+    
+    let updatedEnum
+    if (editingEnumIndex !== null) {
+      // Update existing enum value
+      updatedEnum = [...schemaData.enum]
+      updatedEnum[editingEnumIndex] = newValue
+    } else {
+      // Add new enum value
+      updatedEnum = [...schemaData.enum, newValue]
+    }
     
     setSchemaData({
       ...schemaData,
-      enum: [...schemaData.enum, newValue]
+      enum: updatedEnum
     })
     
     // Reset form
     setCurrentEnumValue(getDefaultEnumValueData())
-  }, [currentEnumValue, schemaData])
+    setEditingEnumIndex(null)
+  }, [currentEnumValue, schemaData, editingEnumIndex])
 
   const handleAddSchema = useCallback(() => {
     if (!validateForm()) {
@@ -265,6 +323,57 @@ const SchemaDialog = ({
     onAddSchema(schemaName.trim(), processedSchemaData, schemaMode)
     closeDialog()
   }, [schemaName, schemaData, schemaMode, validateForm, onAddSchema, closeDialog])
+
+  const handleUpdateSchema = useCallback(() => {
+    if (!validateForm()) {
+      return
+    }
+    
+    // Set default values for array types
+    let processedSchemaData = { ...schemaData }
+    
+    // If schema is array type, set default to empty array
+    if (processedSchemaData.type === "array") {
+      processedSchemaData.default = []
+    }
+    
+    onUpdateSchema(processedSchemaData, schemaMode)
+    closeDialog()
+  }, [schemaData, schemaMode, validateForm, onUpdateSchema, closeDialog])
+
+  const handleEditProperty = useCallback((index) => {
+    const property = schemaData.properties[index]
+    setCurrentProperty({
+      name: property.name,
+      type: property.type || "string",
+      required: property.required,
+      description: property.description,
+      format: property.format,
+      itemsType: property.itemsType || "string",
+      itemsFormat: property.itemsFormat || "",
+      contentMediaType: property.contentMediaType || "",
+      contentSchema: property.contentSchema || "",
+      isComposition: property.isComposition || false,
+      compositionType: property.compositionType || "anyOf",
+      compositionSchemas: property.compositionSchemas || []
+    })
+    setEditingPropertyIndex(index)
+  }, [schemaData.properties])
+
+  const handleEditEnumValue = useCallback((index) => {
+    const enumValue = schemaData.enum[index]
+    setCurrentEnumValue({
+      value: typeof enumValue === 'number' ? enumValue.toString() : enumValue
+    })
+    setEditingEnumIndex(index)
+  }, [schemaData.enum])
+
+  const handleCancelEdit = useCallback(() => {
+    setCurrentProperty(getDefaultPropertyData())
+    setCurrentEnumValue(getDefaultEnumValueData())
+    setEditingPropertyIndex(null)
+    setEditingEnumIndex(null)
+  }, [])
 
   
   // Reusable styles for checkboxes
@@ -289,7 +398,13 @@ const SchemaDialog = ({
         <div className="modal-dialog-ux">
           <div className="modal-ux-inner">
             <div className="modal-ux-header">
-              <h3>{sourceSchemaName ? `Clone Schema from ${sourceSchemaName}` : "Add Schema"}</h3>
+              <h3>
+                {isEditMode 
+                  ? `Edit Schema: ${schemaName}` 
+                  : sourceSchemaName 
+                    ? `Clone Schema from ${sourceSchemaName}` 
+                    : "Add Schema"}
+              </h3>
               <button type="button" className="close-modal" onClick={closeDialog}>
                 {CloseIcon ? <CloseIcon /> : "✕"}
               </button>
@@ -298,20 +413,23 @@ const SchemaDialog = ({
               {/* Section 1: Basic Info */}
               <div className="form-section">
                 <div style={{ display: 'flex', gap: '15px', marginBottom: '12px' }}>
-                  <div className="form-field" style={{ flex: 1 }}>
-                    <label className="form-label" htmlFor="schema-name">Schema Name (Key) <span className="required">*</span></label>
-                    <input 
-                      className="form-input" 
-                      id="schema-name" 
-                      type="text" 
-                      value={schemaName} 
-                      onChange={(e) => setSchemaName(e.target.value)}
-                      placeholder="UserCreateRequest"
-                    />
-                    {validationErrors.schemaName && (
-                      <div className="form-error">{validationErrors.schemaName}</div>
-                    )}
-                  </div>
+                  {/* Schema name input - only in add mode */}
+                  {!isEditMode && (
+                    <div className="form-field" style={{ flex: 1 }}>
+                      <label className="form-label" htmlFor="schema-name">Schema Name (Key) <span className="required">*</span></label>
+                      <input 
+                        className="form-input" 
+                        id="schema-name" 
+                        type="text" 
+                        value={schemaNameState} 
+                        onChange={(e) => setSchemaNameState(e.target.value)}
+                        placeholder="UserCreateRequest"
+                      />
+                      {validationErrors.schemaName && (
+                        <div className="form-error">{validationErrors.schemaName}</div>
+                      )}
+                    </div>
+                  )}
                   
                   <div className="form-field" style={{ flex: 1 }}>
                     <label className="form-label" htmlFor="schema-description">Description</label>
@@ -461,10 +579,12 @@ const SchemaDialog = ({
                         isOpen={compositionDropdownOpen}
                         onToggle={setCompositionDropdownOpen}
                         primitiveOptions={emptyPrimitiveOptions}
-                        options={filterSchemas(compositionSchemaSearch, schemas).map(schemaKey => ({
-                          value: schemaKey,
-                          label: schemaKey
-                        }))}
+                        options={isEditMode 
+                          ? getSchemaOptionsWithoutRef(compositionSchemaSearch)
+                          : filterSchemas(compositionSchemaSearch, schemas).map(schemaKey => ({
+                              value: schemaKey,
+                              label: schemaKey
+                            }))}
                       />
                     </div>
                     {validationErrors.compositionSchemas && (
@@ -492,6 +612,7 @@ const SchemaDialog = ({
                             const newProperties = schemaData.properties.filter((_, i) => i !== index)
                             setSchemaData({...schemaData, properties: newProperties})
                           }}
+                          onEdit={isEditMode ? handleEditProperty : undefined}
                           safeExtractSchemaName={safeExtractSchemaName}
                         />
                       ))}
@@ -507,9 +628,12 @@ const SchemaDialog = ({
                     backgroundColor: '#fafafa'
                   }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                      <h5 style={{ margin: 0 }}>Add New Property:</h5>
+                      <h5 style={{ margin: 0 }}>
+                        {editingPropertyIndex !== null ? 'Edit Property:' : 'Add New Property:'}
+                      </h5>
                       <label style={checkboxLabelStyle}>
                         <input 
+                          disabled={editingPropertyIndex !== null}
                           type="checkbox" 
                           checked={currentProperty.isComposition} 
                           onChange={(e) => setCurrentProperty({
@@ -519,7 +643,7 @@ const SchemaDialog = ({
                           })}
                           style={checkboxInputStyle}
                         />
-                        Use Composition
+                        {isEditMode ? 'Is Composition' : 'Use Composition'}
                       </label>
                     </div>
                     
@@ -548,15 +672,17 @@ const SchemaDialog = ({
                           onSearchChange={setPropertyTypeSearch}
                           isOpen={propertyDropdownOpen}
                           onToggle={setPropertyDropdownOpen}
-                          disabled={currentProperty.isComposition}
+                          disabled={currentProperty.isComposition || editingPropertyIndex !== null}
                           displayValue={currentProperty.type.includes(refPrefix) 
                             ? safeExtractSchemaName(currentProperty.type) 
                             : currentProperty.type}
                           primitiveOptions={primitiveTypeOptions}
-                          options={filterSchemas(propertyTypeSearch, schemas).map(schemaKey => ({
-                            value: `${refPrefix}${schemaKey}`,
-                            label: schemaKey
-                          }))}
+                          options={isEditMode 
+                            ? getSchemaOptionsWithRef(propertyTypeSearch)
+                            : filterSchemas(propertyTypeSearch, schemas).map(schemaKey => ({
+                                value: `${refPrefix}${schemaKey}`,
+                                label: schemaKey
+                              }))}
                         />
                       </div>
                     </div>
@@ -613,10 +739,12 @@ const SchemaDialog = ({
                               isOpen={compositionDropdownOpen}
                               onToggle={setCompositionDropdownOpen}
                               primitiveOptions={primitiveTypeOptions}
-                              options={filterSchemas(compositionSchemaSearch, schemas).map(schemaKey => ({
-                                value: schemaKey,
-                                label: schemaKey
-                              }))}
+                              options={isEditMode 
+                                ? getSchemaOptionsWithoutRef(compositionSchemaSearch)
+                                : filterSchemas(compositionSchemaSearch, schemas).map(schemaKey => ({
+                                    value: schemaKey,
+                                    label: schemaKey
+                                  }))}
                             />
                           </div>
                           {validationErrors.compositionSchemas && (
@@ -644,10 +772,12 @@ const SchemaDialog = ({
                               ? safeExtractSchemaName(currentProperty.itemsType) 
                               : currentProperty.itemsType}
                             primitiveOptions={primitiveTypeOptions}
-                            options={filterSchemas(propertyItemsTypeSearch, schemas).map(schemaKey => ({
-                              value: `${refPrefix}${schemaKey}`,
-                              label: schemaKey
-                            }))}
+                            options={isEditMode 
+                              ? getSchemaOptionsWithRef(propertyItemsTypeSearch)
+                              : filterSchemas(propertyItemsTypeSearch, schemas).map(schemaKey => ({
+                                  value: `${refPrefix}${schemaKey}`,
+                                  label: schemaKey
+                                }))}
                           />
                         </div>
                         {currentProperty.itemsType && 
@@ -692,7 +822,7 @@ const SchemaDialog = ({
                     )}
                     
                     {/* Content Media Type and Schema (only for string type) */}
-                    {currentProperty.type === "string" && (
+                    {currentProperty.type === "string" && currentProperty.isComposition == false && (
                       <div style={{ display: 'flex', gap: '15px', marginBottom: '12px' }}>
                         <div className="form-field" style={{ flex: 1 }}>
                           <label className="form-label">Content Media Type</label>
@@ -746,10 +876,12 @@ const SchemaDialog = ({
                               ? safeExtractSchemaName(currentProperty.contentSchema) 
                               : currentProperty.contentSchema || ""}
                             primitiveOptions={emptyPrimitiveOptions}
-                            options={filterSchemas(contentSchemaSearch, schemas).map(schemaKey => ({
-                              value: `${refPrefix}${schemaKey}`,
-                              label: schemaKey
-                            }))}
+                            options={isEditMode 
+                              ? getSchemaOptionsWithRef(contentSchemaSearch)
+                              : filterSchemas(contentSchemaSearch, schemas).map(schemaKey => ({
+                                  value: `${refPrefix}${schemaKey}`,
+                                  label: schemaKey
+                                }))}
                           />
                         </div>
                       </div>
@@ -820,13 +952,24 @@ const SchemaDialog = ({
                       </label>
                     </div>
                     
-                    <button 
-                      type="button" 
-                      className="btn btn-primary" 
-                      onClick={handleAddProperty}
-                    >
-                      Add Property
-                    </button>
+                    <div style={{ display: 'flex', gap: '10px' }}>
+                      <button 
+                        type="button" 
+                        className="btn btn-primary" 
+                        onClick={handleAddProperty}
+                      >
+                        {editingPropertyIndex !== null ? 'Update Property' : 'Add Property'}
+                      </button>
+                      {editingPropertyIndex !== null && (
+                        <button 
+                          type="button" 
+                          className="btn btn-secondary" 
+                          onClick={handleCancelEdit}
+                        >
+                          Cancel Edit
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
               )}
@@ -850,10 +993,12 @@ const SchemaDialog = ({
                         ? safeExtractSchemaName(schemaData.itemsType) 
                         : schemaData.itemsType}
                       primitiveOptions={primitiveTypeOptions}
-                      options={filterSchemas(itemsTypeSearch, schemas).map(schemaKey => ({
-                        value: `${refPrefix}${schemaKey}`,
-                        label: schemaKey
-                      }))}
+                      options={isEditMode 
+                        ? getSchemaOptionsWithRef(itemsTypeSearch)
+                        : filterSchemas(itemsTypeSearch, schemas).map(schemaKey => ({
+                            value: `${refPrefix}${schemaKey}`,
+                            label: schemaKey
+                          }))}
                     />
                   </div>
                 </div>
@@ -872,6 +1017,8 @@ const SchemaDialog = ({
                         className="form-input" 
                         value={schemaData.enumType} 
                         onChange={(e) => setSchemaData({...schemaData, enumType: e.target.value, enumFormat: ""})}
+                        disabled={isEditMode}
+                        style={isEditMode ? { backgroundColor: '#f5f5f5', cursor: 'not-allowed' } : {}}
                       >
                         <option value="string">String</option>
                         <option value="number">Number</option>
@@ -933,16 +1080,27 @@ const SchemaDialog = ({
                               ({typeof enumItem === 'number' ? 'number' : 'string'})
                             </span>
                           </div>
-                          <button 
-                            type="button" 
-                            className="btn btn-danger btn-sm" 
-                            onClick={() => {
-                              const newEnum = schemaData.enum.filter((_, i) => i !== index)
-                              setSchemaData({...schemaData, enum: newEnum})
-                            }}
-                          >
-                            Remove
-                          </button>
+                          <div style={{ display: 'flex', gap: '8px' }}>
+                            {isEditMode && (
+                              <button 
+                                type="button" 
+                                className="btn btn-secondary btn-sm" 
+                                onClick={() => handleEditEnumValue(index)}
+                              >
+                                Edit
+                              </button>
+                            )}
+                            <button 
+                              type="button" 
+                              className="btn btn-danger btn-sm" 
+                              onClick={() => {
+                                const newEnum = schemaData.enum.filter((_, i) => i !== index)
+                                setSchemaData({...schemaData, enum: newEnum})
+                              }}
+                            >
+                              Remove
+                            </button>
+                          </div>
                         </div>
                       ))}
                     </div>
@@ -956,7 +1114,9 @@ const SchemaDialog = ({
                     borderRadius: '4px',
                     backgroundColor: '#fafafa'
                   }}>
-                    <h5>Add New Enum Value:</h5>
+                    <h5>
+                      {editingEnumIndex !== null ? 'Edit Enum Value:' : 'Add New Enum Value:'}
+                    </h5>
                     
                     <div className="form-field" style={{ marginBottom: '12px' }}>
                       <label className="form-label">Value <span className="required">*</span></label>
@@ -972,13 +1132,24 @@ const SchemaDialog = ({
                       )}
                     </div>
                     
-                    <button 
-                      type="button" 
-                      className="btn btn-primary" 
-                      onClick={handleAddEnumValue}
-                    >
-                      Add Enum Value
-                    </button>
+                    <div style={{ display: 'flex', gap: '10px' }}>
+                      <button 
+                        type="button" 
+                        className="btn btn-primary" 
+                        onClick={handleAddEnumValue}
+                      >
+                        {editingEnumIndex !== null ? 'Update Enum Value' : 'Add Enum Value'}
+                      </button>
+                      {editingEnumIndex !== null && (
+                        <button 
+                          type="button" 
+                          className="btn btn-secondary" 
+                          onClick={handleCancelEdit}
+                        >
+                          Cancel Edit
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
               )}
@@ -1018,7 +1189,12 @@ const SchemaDialog = ({
 
               <div className="modal-actions-row">
                 <Button className="btn modal-btn" onClick={closeDialog}>Cancel</Button>
-                <Button className="btn modal-btn authorize" onClick={handleAddSchema}>Add Schema</Button>
+                <Button 
+                  className="btn modal-btn authorize" 
+                  onClick={isEditMode ? handleUpdateSchema : handleAddSchema}
+                >
+                  {isEditMode ? 'Update Schema' : 'Add Schema'}
+                </Button>
               </div>
             </div>
           </div>
@@ -1031,11 +1207,14 @@ const SchemaDialog = ({
 SchemaDialog.propTypes = {
   showDialog: PropTypes.bool.isRequired,
   onClose: PropTypes.func.isRequired,
-  onAddSchema: PropTypes.func.isRequired,
+  onAddSchema: PropTypes.func,
+  onUpdateSchema: PropTypes.func,
   schemas: PropTypes.object.isRequired,
   getComponent: PropTypes.func.isRequired,
   initialData: PropTypes.object,
   sourceSchemaName: PropTypes.string,
+  schemaName: PropTypes.string,
+  schemaData: PropTypes.object,
 }
 
 export default SchemaDialog
