@@ -93,24 +93,28 @@ export const CompositionTypeSelect = ({
 /**
  * Reusable Selected Schemas List Component
  * @param {object} props - Component props
- * @param {array} props.schemas - Array of schema names
+ * @param {array} props.schemas - Array of schema names (keys)
  * @param {function} props.onRemove - Function to remove a schema by index
+ * @param {object} props.schemasObject - The schemas object to get titles from
  * @returns {JSX.Element} - Selected schemas list element
  */
-export const SelectedSchemasList = ({ schemas, onRemove }) => {
+export const SelectedSchemasList = ({ schemas, onRemove, schemasObject = {} }) => {
   return (
     <div className="selected-schemas">
-      {schemas.map((schema, index) => (
-        <div key={index} className="selected-schema">
-          {schema}
-          <button 
-            type="button" 
-            onClick={() => onRemove(index)}
-          >
-            Remove
-          </button>
-        </div>
-      ))}
+      {schemas.map((schemaKey, index) => {
+        const displayName = schemasObject[schemaKey]?.title || schemaKey
+        return (
+          <div key={index} className="selected-schema">
+            {displayName}
+            <button 
+              type="button" 
+              onClick={() => onRemove(index)}
+            >
+              Remove
+            </button>
+          </div>
+        )
+      })}
     </div>
   )
 }
@@ -123,6 +127,7 @@ export const SelectedSchemasList = ({ schemas, onRemove }) => {
  * @param {function} props.onEdit - Optional function to edit a property by index
  * @param {boolean} props.isEditMode - Whether edit mode is enabled
  * @param {function} props.safeExtractSchemaName - Function to extract schema name from ref
+ * @param {object} props.schemas - The schemas object to get titles from
  * @returns {JSX.Element} - Selected properties list element
  */
 export const SelectedPropertiesList = ({ 
@@ -130,25 +135,36 @@ export const SelectedPropertiesList = ({
   onRemove, 
   onEdit, 
   isEditMode,
-  safeExtractSchemaName 
+  safeExtractSchemaName,
+  schemas = {}
 }) => {
   const renderPropertyInfo = (property) => {
     if (property.anyOf || property.oneOf || property.allOf) {
       const compositionType = property.anyOf ? 'anyOf' : property.oneOf ? 'oneOf' : 'allOf'
-      const schemas = property[compositionType].map(cType => {
+      const schemaNames = property[compositionType].map(cType => {
         const refValue = cType.$ref || cType.$$ref
-        return refValue ? safeExtractSchemaName(refValue): cType.type
+        if (refValue) {
+          const schemaKey = safeExtractSchemaName(refValue)
+          return schemas[schemaKey]?.title || schemaKey
+        }
+        return cType.type
       }).join(', ')
-      return `(${compositionType}[${schemas}]${property.required ? ', required' : ''})`
+      return `(${compositionType}[${schemaNames}]${property.required ? ', required' : ''})`
     } else {
       let typeDisplay = property.type.includes(refPrefix) 
-        ? safeExtractSchemaName(property.type) 
+        ? (() => {
+            const schemaKey = safeExtractSchemaName(property.type)
+            return schemas[schemaKey]?.title || schemaKey
+          })()
         : property.type
       
       // Handle array types to show items type
       if (property.type === 'array' && property.itemsType) {
         const itemsType = property.itemsType.includes(refPrefix)
-          ? safeExtractSchemaName(property.itemsType)
+          ? (() => {
+              const schemaKey = safeExtractSchemaName(property.itemsType)
+              return schemas[schemaKey]?.title || schemaKey
+            })()
           : property.itemsType
         typeDisplay = `array[${itemsType}]`
       }

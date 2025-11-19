@@ -465,8 +465,8 @@ const Models = ({
       // Build the schema object
       const schema = {}
       
-      // Set schema title to the original schema name
-      schema.title = editSchemaName
+      // Preserve the title from schemaData if it exists (don't overwrite with sanitized key)
+      if (schemaData.title) schema.title = schemaData.title
       
       // Basic fields
       if (schemaData.description) schema.description = schemaData.description
@@ -609,11 +609,9 @@ const Models = ({
       if (schemaData.deprecated) schema.deprecated = true
       if (schemaData.nullable) schema.nullable = true
       
-      // Sanitize schema name before using as key
-      const sanitizedSchemaName = sanitizeSchemaName(editSchemaName)
-      
+      // In edit mode, use the existing key directly (don't sanitize - key should never change)
       // Update existing schema in spec
-      next.components.schemas[sanitizedSchemaName] = schema
+      next.components.schemas[editSchemaName] = schema
       
       const asString = JSON.stringify(next, null, 2)
       specActions.updateSpec(asString)
@@ -623,7 +621,7 @@ const Models = ({
     } catch (e) {
       console.error("Error updating schema:", e)
     }
-  }, [editSchemaName, specSelectors, specActions, closeEditDialog, sanitizeSchemaName])
+  }, [editSchemaName, specSelectors, specActions, closeEditDialog])
 
   const handleJSONSchema202012Ref = (schemaName) => (node) => {
     if (node !== null) {
