@@ -120,7 +120,7 @@ const SearchableSelect = ({
                   onToggle(false)
                 }}
               >
-                {option.label}
+                {option.label.length > 30 ? `${option.label.substring(0, 30)}...` : option.label}
               </div>
             ))}
             {filteredOptions.length === 0 && searchValue && (
