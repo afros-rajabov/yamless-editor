@@ -252,7 +252,7 @@ export default class OperationSummary extends PureComponent {
         {!isEditing && !isShown && <CopyToClipboardBtn textToCopy={`${specPath.get(1)}`} />}
         {isShown && (
           !isEditing ? (
-            <>
+            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
               <button 
                 className="opblock-summary-edit-btn"
                 onClick={this.handleEditClick}
@@ -274,9 +274,9 @@ export default class OperationSummary extends PureComponent {
               >
                 <TrashIcon />
               </button>
-            </>
+            </div>
           ) : (
-            <>
+            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
               <button 
                 className="opblock-summary-save-btn"
                 onClick={this.handleSaveClick}
@@ -291,7 +291,7 @@ export default class OperationSummary extends PureComponent {
               >
                 ✕
               </button>
-            </>
+            </div>
           )
         )}
         {/* {

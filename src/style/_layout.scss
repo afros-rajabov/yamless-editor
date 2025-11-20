@@ -510,11 +510,11 @@
     .opblock-summary-delete-btn,
     .opblock-summary-duplicate-btn {
       background: none;
-      border: 1px solid transparent;
+      border: 1px solid rgba(0, 0, 0, 0.1);
       cursor: pointer;
       font-size: 14px;
       padding: 4px 6px;
-      margin: 0 2px;
+      // margin: 0 2px;
       border-radius: 3px;
       transition: all 0.2s;
       color: #3b4151;
@@ -527,37 +527,29 @@
         height: 16px;
       }
 
-      &:hover {
-        background-color: rgba(0, 0, 0, 0.05);
-        border-color: rgba(0, 0, 0, 0.1);
-      }
+      background: none;
+      border-color: rgba(0, 0, 0, 0.1);
     }
 
     .opblock-summary-save-btn {
       color: #49cc90;
       
-      &:hover {
-        background-color: rgba(73, 204, 144, 0.1);
-        border-color: #49cc90;
-      }
+      background-color: rgba(73, 204, 144, 0.1);
+      border-color: #49cc90;
     }
 
     .opblock-summary-cancel-btn {
       color: #f93e3e;
       
-      &:hover {
-        background-color: rgba(249, 62, 62, 0.1);
-        border-color: #f93e3e;
-      }
+      background-color: rgba(249, 62, 62, 0.1);
+      border-color: #f93e3e;
     }
 
     .opblock-summary-delete-btn {
       color: #f93e3e;
       
-      &:hover {
-        background-color: rgba(249, 62, 62, 0.1);
-        border-color: #f93e3e;
-      }
+      background-color: rgba(249, 62, 62, 0.1);
+      border-color: #f93e3e;
     }
   }
 
