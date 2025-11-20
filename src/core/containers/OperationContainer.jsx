@@ -19,6 +19,7 @@ export default class OperationContainer extends PureComponent {
       selectedDescription: null,
       selectedMethod: null,
       selectedPath: null,
+      selectedDeprecated: null,
       showValidationDialog: false,
       validationError: "",
       pendingParameters: null,
@@ -171,6 +172,7 @@ export default class OperationContainer extends PureComponent {
     // Get summary and description from the resolved operation data
     const summary = resolvedSubtree.get("summary") || ''
     const description = resolvedSubtree.get("description") || ''
+    const deprecated = resolvedSubtree.get("deprecated") || false
     
     // Get parameters from original spec JSON to preserve $ref references
     // This ensures schema references are preserved when editing
@@ -237,6 +239,7 @@ export default class OperationContainer extends PureComponent {
       selectedDescription: description,
       selectedMethod: method,
       selectedPath: path,
+      selectedDeprecated: deprecated,
       pendingParameters: cleanParameters, // Initialize with clean params
       pendingParameterOperations: [],
       pendingResponses: cleanResponses,
@@ -253,6 +256,7 @@ export default class OperationContainer extends PureComponent {
       selectedDescription: null,
       selectedMethod: null,
       selectedPath: null,
+      selectedDeprecated: null,
       pendingParameters: null,
       pendingParameterOperations: [],
       pendingResponses: null,
@@ -373,6 +377,10 @@ export default class OperationContainer extends PureComponent {
 
   handlePathChange = (newPath) => {
     this.setState({ selectedPath: newPath })
+  }
+
+  handleDeprecatedChange = (newDeprecated) => {
+    this.setState({ selectedDeprecated: newDeprecated })
   }
 
   handleParameterAdd = (parameter) => {
@@ -595,7 +603,7 @@ export default class OperationContainer extends PureComponent {
 
   handleSaveClick = () => {
     const { specActions, path, method } = this.props
-    const { selectedMethod, selectedPath, selectedSummary, selectedDescription } = this.state
+    const { selectedMethod, selectedPath, selectedSummary, selectedDescription, selectedDeprecated } = this.state
 
     // Validate path if it's being changed
     if (selectedPath && selectedPath !== path) {
@@ -621,6 +629,7 @@ export default class OperationContainer extends PureComponent {
     const resolvedSubtree = this.getResolvedSubtree() || new Map()
     const currentSummary = resolvedSubtree.get("summary") || ''
     const currentDescription = resolvedSubtree.get("description") || ''
+    const currentDeprecated = resolvedSubtree.get("deprecated") || false
     
     // Prepare field updates only if they actually changed
     const fieldUpdates = {}
@@ -629,6 +638,9 @@ export default class OperationContainer extends PureComponent {
     }
     if (selectedDescription !== null && selectedDescription !== currentDescription) {
       fieldUpdates.description = selectedDescription
+    }
+    if (selectedDeprecated !== null && selectedDeprecated !== currentDeprecated) {
+      fieldUpdates.deprecated = selectedDeprecated
     }
 
     // Prepare parameter operations
@@ -718,6 +730,7 @@ export default class OperationContainer extends PureComponent {
       selectedDescription: null,
       selectedMethod: null,
       selectedPath: null,
+      selectedDeprecated: null,
       pendingParameters: null,
       pendingParameterOperations: [],
       pendingResponses: null,
@@ -855,10 +868,12 @@ export default class OperationContainer extends PureComponent {
         selectedDescription={this.state.selectedDescription}
         selectedMethod={this.state.selectedMethod}
         selectedPath={this.state.selectedPath}
+        selectedDeprecated={this.state.selectedDeprecated}
         onSummaryChange={this.handleSummaryChange}
         onDescriptionChange={this.handleDescriptionChange}
         onMethodChange={this.handleMethodChange}
         onPathChange={this.handlePathChange}
+        onDeprecatedChange={this.handleDeprecatedChange}
         onEditClick={this.handleEditClick}
         onSaveClick={this.handleSaveClick}
         onCancelEdit={this.handleCancelClick}

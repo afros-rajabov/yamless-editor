@@ -41,10 +41,12 @@ export default class Operation extends PureComponent {
     selectedDescription: PropTypes.string,
     selectedMethod: PropTypes.string,
     selectedPath: PropTypes.string,
+    selectedDeprecated: PropTypes.bool,
     onSummaryChange: PropTypes.func,
     onDescriptionChange: PropTypes.func,
     onMethodChange: PropTypes.func,
     onPathChange: PropTypes.func,
+    onDeprecatedChange: PropTypes.func,
     onEditClick: PropTypes.func,
     onDuplicateClick: PropTypes.func,
     onDeleteClick: PropTypes.func,
@@ -81,10 +83,12 @@ export default class Operation extends PureComponent {
     selectedDescription: null,
     selectedMethod: null,
     selectedPath: null,
+    selectedDeprecated: null,
     onSummaryChange: null,
     onDescriptionChange: null,
     onMethodChange: null,
     onPathChange: null,
+    onDeprecatedChange: null,
     onEditClick: null,
     onDuplicateClick: null,
     onDeleteClick: null,
@@ -153,7 +157,7 @@ export default class Operation extends PureComponent {
     } = op
 
     // Get editing state from props
-    const { isEditing, selectedSummary, selectedDescription, selectedMethod, selectedPath, onSummaryChange, onDescriptionChange, onMethodChange, onPathChange, onSaveClick, onCancelEdit, showValidationDialog, validationError, onCloseValidationDialog, pendingParameters, onParameterAdd, onParameterUpdate, onParameterDelete, pendingResponses, onResponseAdd, onResponseUpdate, onResponseDelete, pendingRequestBody, onRequestBodyAdd, onRequestBodyUpdate, onRequestBodyDelete } = this.props
+    const { isEditing, selectedSummary, selectedDescription, selectedMethod, selectedPath, selectedDeprecated, onSummaryChange, onDescriptionChange, onMethodChange, onPathChange, onDeprecatedChange, onSaveClick, onCancelEdit, showValidationDialog, validationError, onCloseValidationDialog, pendingParameters, onParameterAdd, onParameterUpdate, onParameterDelete, pendingResponses, onResponseAdd, onResponseUpdate, onResponseDelete, pendingRequestBody, onRequestBodyAdd, onRequestBodyUpdate, onRequestBodyDelete } = this.props
     
 
     const externalDocsUrl = externalDocs ? safeBuildUrl(externalDocs.url, specSelectors.url(), { selectedServer: oas3Selectors.selectedServer() }) : ""
@@ -209,10 +213,12 @@ export default class Operation extends PureComponent {
             selectedDescription={selectedDescription}
             selectedMethod={selectedMethod}
             selectedPath={selectedPath}
+            selectedDeprecated={selectedDeprecated}
             onSummaryChange={onSummaryChange}
             onDescriptionChange={onDescriptionChange}
             onMethodChange={onMethodChange}
             onPathChange={onPathChange}
+            onDeprecatedChange={onDeprecatedChange}
             onEditClick={this.props.onEditClick}
             onDuplicateClick={this.props.onDuplicateClick}
             onDeleteClick={this.props.onDeleteClick}

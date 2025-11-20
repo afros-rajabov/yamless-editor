@@ -25,10 +25,12 @@ export default class OperationSummary extends PureComponent {
     selectedDescription: PropTypes.string,
     selectedMethod: PropTypes.string,
     selectedPath: PropTypes.string,
+    selectedDeprecated: PropTypes.bool,
     onSummaryChange: PropTypes.func,
     onDescriptionChange: PropTypes.func,
     onMethodChange: PropTypes.func,
     onPathChange: PropTypes.func,
+    onDeprecatedChange: PropTypes.func,
     onEditClick: PropTypes.func,
     onDuplicateClick: PropTypes.func,
     onDeleteClick: PropTypes.func,
@@ -52,10 +54,12 @@ export default class OperationSummary extends PureComponent {
     selectedDescription: null,
     selectedMethod: null,
     selectedPath: null,
+    selectedDeprecated: null,
     onSummaryChange: null,
     onDescriptionChange: null,
     onMethodChange: null,
     onPathChange: null,
+    onDeprecatedChange: null,
     onEditClick: null,
     onDuplicateClick: null,
     onDeleteClick: null,
@@ -139,6 +143,13 @@ export default class OperationSummary extends PureComponent {
     }
   }
 
+  handleDeprecatedChange = (newDeprecated) => {
+    const { onDeprecatedChange } = this.props
+    if (onDeprecatedChange) {
+      onDeprecatedChange(newDeprecated)
+    }
+  }
+
 
   render() {
 
@@ -156,6 +167,7 @@ export default class OperationSummary extends PureComponent {
       selectedDescription,
       selectedMethod,
       selectedPath,
+      selectedDeprecated,
       onSummaryChange,
       onDescriptionChange,
       onDeleteClick,
@@ -230,15 +242,29 @@ export default class OperationSummary extends PureComponent {
 
             {!showSummary ? null :
               isEditing ? (
-                <input 
-                  className="opblock-summary-description opblock-summary-description-edit"
-                  type="text"
-                  value={selectedSummary || ''}
-                  onChange={(e) => this.handleSummaryChange(e.target.value)}
-                  onClick={(e) => e.stopPropagation()}
-                  onMouseDown={(e) => e.stopPropagation()}
-                  placeholder="Enter summary"
-                />
+                <>
+                  <input 
+                    className="opblock-summary-description opblock-summary-description-edit"
+                    type="text"
+                    value={selectedSummary || ''}
+                    onChange={(e) => this.handleSummaryChange(e.target.value)}
+                    onClick={(e) => e.stopPropagation()}
+                    onMouseDown={(e) => e.stopPropagation()}
+                    placeholder="Enter summary"
+                  />
+                  <label style={{ display: "flex", alignItems: "center", gap: "6px", marginTop: "4px" }}>
+                    <input 
+                      type="checkbox"
+                      checked={selectedDeprecated || false}
+                      onChange={(e) => {
+                        this.handleDeprecatedChange(e.target.checked)
+                        e.stopPropagation()
+                      }}
+                      onMouseDown={(e) => e.stopPropagation()}
+                    />
+                    Deprecated
+                  </label>
+                </>
               ) : (
                 <div className="opblock-summary-description">
                   {toString(resolvedSummary || summary)}

@@ -371,6 +371,9 @@ export default {
     if (updates.description !== undefined) {
       newState = newState.setIn(["json", "paths", path, method, "description"], updates.description)
     }
+    if (updates.deprecated !== undefined) {
+      newState = newState.setIn(["json", "paths", path, method, "deprecated"], updates.deprecated)
+    }
     
     // Also update resolved data if it exists
     if (resolvedData) {
@@ -379,6 +382,9 @@ export default {
       }
       if (updates.description !== undefined) {
         newState = newState.setIn(["resolved", "paths", path, method, "description"], updates.description)
+      }
+      if (updates.deprecated !== undefined) {
+        newState = newState.setIn(["resolved", "paths", path, method, "deprecated"], updates.deprecated)
       }
     }
 
@@ -394,6 +400,12 @@ export default {
       const currentResolvedSubtree = newState.getIn(["resolvedSubtrees", "paths", path, method])
       if (currentResolvedSubtree) {
         newState = newState.setIn(["resolvedSubtrees", "paths", path, method, "description"], updates.description)
+      }
+    }
+    if (updates.deprecated !== undefined) {
+      const currentResolvedSubtree = newState.getIn(["resolvedSubtrees", "paths", path, method])
+      if (currentResolvedSubtree) {
+        newState = newState.setIn(["resolvedSubtrees", "paths", path, method, "deprecated"], updates.deprecated)
       }
     }
 
