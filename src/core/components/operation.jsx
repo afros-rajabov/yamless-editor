@@ -242,7 +242,7 @@ export default class Operation extends PureComponent {
                   {isEditing ? (
                     <textarea 
                       className="opblock-description opblock-description-edit"
-                      value={selectedDescription || description || ''}
+                      value={selectedDescription !== null && selectedDescription !== undefined ? selectedDescription : (description || '')}
                       onChange={(e) => onDescriptionChange && onDescriptionChange(e.target.value)}
                       placeholder="Enter description (supports markdown)"
                       rows="4"
