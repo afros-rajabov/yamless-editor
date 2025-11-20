@@ -49,6 +49,7 @@ const PropertyForm = ({
   getSchemaOptionsWithoutRef,
   handleAddProperty,
   handleCancelEdit,
+  handleCancelAdd,
   checkboxLabelStyle,
   checkboxInputStyle
 }) => {
@@ -315,6 +316,13 @@ const PropertyForm = ({
             Cancel Edit
           </button>
         )}
+        <button 
+            type="button" 
+            className="btn btn-secondary" 
+            onClick={handleCancelAdd}
+          >
+            Cancel
+          </button>
         <button 
           type="button" 
           className="btn btn-primary" 

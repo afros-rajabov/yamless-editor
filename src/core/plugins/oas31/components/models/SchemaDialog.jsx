@@ -393,6 +393,10 @@ const SchemaDialog = ({
     setShowPropertyForm(false)
   }, [])
 
+  const handleCancelAdd = useCallback(() => {
+    setShowPropertyForm(false)
+  }, [])
+
   
   const CloseIcon = getComponent("CloseIcon")
   const Button = getComponent("Button")
@@ -568,7 +572,7 @@ const SchemaDialog = ({
                     </div>
                   )}
                   
-                  {/* Add Property Button - shown when form is hidden */}
+                  {/* New Property Button - shown when form is hidden */}
                   {!(showPropertyForm || editingPropertyIndex !== null) && (
                     <div style={{ marginTop: '20px' }}>
                       <button 
@@ -615,6 +619,7 @@ const SchemaDialog = ({
                       getSchemaOptionsWithoutRef={getSchemaOptionsWithoutRef}
                       handleAddProperty={handleAddProperty}
                       handleCancelEdit={handleCancelEdit}
+                      handleCancelAdd={handleCancelAdd}
                       checkboxLabelStyle={checkboxLabelStyle}
                       checkboxInputStyle={checkboxInputStyle}
                     />
