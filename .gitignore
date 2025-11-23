@@ -17,7 +17,7 @@ test/e2e/db.json
 docs/_book
 dev-helpers/examples
 
-# dist
+dist/
 flavors/**/dist/*
 /lib
 /es
