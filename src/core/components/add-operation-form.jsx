@@ -275,24 +275,32 @@ export default class AddOperationForm extends Component {
 
     return (
       <form onSubmit={this.handleSubmit}>
-                <div className="form-field">
+
+        <div className="form-field">
           <label className="form-label">
-            Tag <span className="required">*</span>
+            Path <span className="required">*</span>
           </label>
-          <SearchableSelect
-            value={tag}
-            onChange={this.handleTagChange}
-            placeholder="Select tag..."
-            searchValue={tagSearch}
-            onSearchChange={this.handleTagSearchChange}
-            isOpen={tagDropdownOpen}
-            onToggle={this.handleTagToggle}
-            displayValue={tag}
-            options={tagOptions}
-            primitiveOptions={[]}
+          <input
+            type="text"
+            style={{ fontWeight: "bold", letterSpacing: "0.5px" }}
+            className={`form-input ${pathValidationError || uniquenessError ? "invalid" : ""}`}
+            value={path}
+            onChange={this.handlePathChange}
+            placeholder="Enter path (e.g., /users/{id})"
+            required
           />
+          {pathValidationError && (
+            <div className="form-validation-error" style={{ color: "#d32f2f", fontSize: "12px", marginTop: "4px" }}>
+              {pathValidationError}
+            </div>
+          )}
+          {uniquenessError && (
+            <div className="form-validation-error" style={{ color: "#d32f2f", fontSize: "12px", marginTop: "4px" }}>
+              {uniquenessError}
+            </div>
+          )}
         </div>
-        
+
         <div className="form-field">
           <label className="form-label">
             Method <span className="required">*</span>
@@ -315,26 +323,20 @@ export default class AddOperationForm extends Component {
 
         <div className="form-field">
           <label className="form-label">
-            Path <span className="required">*</span>
+            Tag <span className="required">*</span>
           </label>
-          <input
-            type="text"
-            className={`form-input ${pathValidationError || uniquenessError ? "invalid" : ""}`}
-            value={path}
-            onChange={this.handlePathChange}
-            placeholder="Enter path (e.g., /users/{id})"
-            required
+          <SearchableSelect
+            value={tag}
+            onChange={this.handleTagChange}
+            placeholder="Select tag..."
+            searchValue={tagSearch}
+            onSearchChange={this.handleTagSearchChange}
+            isOpen={tagDropdownOpen}
+            onToggle={this.handleTagToggle}
+            displayValue={tag}
+            options={tagOptions}
+            primitiveOptions={[]}
           />
-          {pathValidationError && (
-            <div className="form-validation-error" style={{ color: "#d32f2f", fontSize: "12px", marginTop: "4px" }}>
-              {pathValidationError}
-            </div>
-          )}
-          {uniquenessError && (
-            <div className="form-validation-error" style={{ color: "#d32f2f", fontSize: "12px", marginTop: "4px" }}>
-              {uniquenessError}
-            </div>
-          )}
         </div>
 
         <div className="modal-actions-row">
