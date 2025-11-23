@@ -62,7 +62,7 @@ export default class RequestBodyEditDialog extends React.Component {
       onClose()
     }
 
-    const title = requestBody ? "Edit Request Body" : "Add New Request Body"
+    const title = requestBody ? "Edit Request Body" : "Add Request Body"
 
     return (
       <div className="dialog-ux" aria-modal="true" role="dialog">
