@@ -316,13 +316,15 @@ const PropertyForm = ({
             Cancel Edit
           </button>
         )}
-        <button 
+        {editingPropertyIndex === null && (
+          <button 
             type="button" 
             className="btn btn-secondary" 
             onClick={handleCancelAdd}
           >
             Cancel
           </button>
+        )}
         <button 
           type="button" 
           className="btn btn-primary" 
