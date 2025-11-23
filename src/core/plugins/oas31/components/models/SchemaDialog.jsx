@@ -328,9 +328,9 @@ const SchemaDialog = ({
     let processedSchemaData = { ...schemaData }
     
     // If schema is array type, set default to empty array
-    if (processedSchemaData.type === "array") {
-      processedSchemaData.default = []
-    }
+    // if (processedSchemaData.type === "array") {
+    //   processedSchemaData.default = []
+    // }
     
     // Derive schemaMode from type for backward compatibility with handlers
     const schemaMode = processedSchemaData.type === "composition" ? "COMPOSITE" : "BUILD"
@@ -347,9 +347,9 @@ const SchemaDialog = ({
     let processedSchemaData = { ...schemaData }
     
     // If schema is array type, set default to empty array
-    if (processedSchemaData.type === "array") {
-      processedSchemaData.default = []
-    }
+    // if (processedSchemaData.type === "array") {
+    //   processedSchemaData.default = []
+    // }
     
     // Derive schemaMode from type for backward compatibility with handlers
     const schemaMode = processedSchemaData.type === "composition" ? "COMPOSITE" : "BUILD"
