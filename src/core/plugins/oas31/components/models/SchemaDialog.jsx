@@ -553,7 +553,7 @@ const SchemaDialog = ({
               {/* Section 2: Properties (for object type) */}
               {schemaData.type === "object" && !isCompositionType && (
                 <div className="form-section">
-                  <h4>Object Properties</h4>
+                  <h4>Properties</h4>
                   
                   {/* Added Properties List (Read-only) */}
                   {schemaData.properties.length > 0 && (
@@ -743,10 +743,10 @@ const SchemaDialog = ({
 
               {/* Section 4: Additional Schema Properties */}
               <div className="form-section">
-                <h4>Additional Schema Properties</h4>
+                <h4>Statuses</h4>
                 
                 <div className="form-field">
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  <div style={{ display: 'flex', flexDirection: 'row', gap: '12px' }}>
                     <label style={checkboxLabelStyle}>
                       <input 
                         type="checkbox" 
@@ -754,7 +754,7 @@ const SchemaDialog = ({
                         onChange={(e) => setSchemaData({...schemaData, nullable: e.target.checked})}
                         style={checkboxInputStyle}
                       />
-                      Nullable (value can be null)
+                      Nullable
                     </label>
                     
                     <label style={checkboxLabelStyle}>
