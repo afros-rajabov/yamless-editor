@@ -362,7 +362,7 @@ const Models = ({
                         propSchema.items.format = prop.itemsFormat
                       }
                     }
-                    propSchema.default = []
+                    // propSchema.default = []
                   }
                 }
                 
@@ -551,7 +551,7 @@ const Models = ({
                         propSchema.items.format = prop.itemsFormat
                       }
                     }
-                    propSchema.default = []
+                    // propSchema.default = []
                   }
                 }
                 
