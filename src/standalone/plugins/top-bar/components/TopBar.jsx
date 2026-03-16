@@ -66,7 +66,7 @@ class TopBar extends React.Component {
 
   componentWillUnmount() {
     if (this._pollTimer) {
-      clearInterval(this._pollTimer)
+      clearTimeout(this._pollTimer)
     }
   }
 
@@ -319,11 +319,11 @@ class TopBar extends React.Component {
       if (res.ok) {
         const user = await res.json()
         this.setState({ githubUser: user.login })
-      } else {
+      } else if (res.status === 401) {
         this.signOut()
       }
     } catch {
-      this.signOut()
+      // transient network error -- keep token, don't sign out
     }
   }
 
@@ -359,14 +359,14 @@ class TopBar extends React.Component {
     }
   }
 
-  pollForToken = (deviceCode, interval, expiresIn) => {
+  pollForToken = (deviceCode, initialInterval, expiresIn) => {
     const proxyUrl = this.getProxyUrl()
     const clientId = this.getClientId()
     const startTime = Date.now()
+    let currentInterval = initialInterval
 
-    this._pollTimer = setInterval(async () => {
+    const poll = async () => {
       if (Date.now() - startTime > expiresIn * 1000) {
-        clearInterval(this._pollTimer)
         this._pollTimer = null
         this.setState({ deviceFlowPending: false, deviceUserCode: null, deviceVerificationUri: null })
         return
@@ -385,7 +385,6 @@ class TopBar extends React.Component {
         const data = await res.json()
 
         if (data.access_token) {
-          clearInterval(this._pollTimer)
           this._pollTimer = null
           localStorage.setItem(LOCALSTORAGE_TOKEN_KEY, data.access_token)
           this.setState({
@@ -395,16 +394,29 @@ class TopBar extends React.Component {
             deviceVerificationUri: null,
           })
           this.fetchGitHubUser(data.access_token)
+          return
+        }
+
+        if (data.error === "slow_down") {
+          currentInterval = (data.interval || currentInterval + 5)
+        } else if (data.error === "expired_token" || data.error === "access_denied") {
+          this._pollTimer = null
+          this.setState({ deviceFlowPending: false, deviceUserCode: null, deviceVerificationUri: null })
+          return
         }
       } catch {
-        // keep polling
+        // transient error, keep polling
       }
-    }, interval * 1000)
+
+      this._pollTimer = setTimeout(poll, currentInterval * 1000)
+    }
+
+    this._pollTimer = setTimeout(poll, currentInterval * 1000)
   }
 
   signOut = () => {
     if (this._pollTimer) {
-      clearInterval(this._pollTimer)
+      clearTimeout(this._pollTimer)
       this._pollTimer = null
     }
     localStorage.removeItem(LOCALSTORAGE_TOKEN_KEY)
