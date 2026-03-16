@@ -54,6 +54,10 @@ const result = configBuilder(
             from: require.resolve("../dev-helpers/oauth2-redirect.js"),
             to: ".",
           },
+          {
+            from: require.resolve("../dev-helpers/favicon.svg"),
+            to: ".",
+          },
         ],
       }),
       new WebpackBundleSizeAnalyzerPlugin("log.bundle-sizes.swagger-ui.txt"),
