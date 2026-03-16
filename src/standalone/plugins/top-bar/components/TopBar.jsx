@@ -9,6 +9,16 @@ import { isOAS31 } from "core/plugins/oas31/fn"
 const GITHUB_API = "https://api.github.com"
 const LOCALSTORAGE_TOKEN_KEY = "yamless_github_token"
 
+function titleToGistFilename(title) {
+  if (!title || typeof title !== "string") return "openapi.json"
+  const snake = title
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_|_$/g, "")
+  return snake ? `${snake}.openapi.json` : "openapi.json"
+}
+
 class TopBar extends React.Component {
 
   static propTypes = {
@@ -29,6 +39,10 @@ class TopBar extends React.Component {
       showGistPicker: false,
       gistList: [],
       gistListLoading: false,
+      authLoading: false,
+      gistSaving: false,
+      gistOpening: false,
+      lastSavedSpec: null,
     }
     this.fileInputRef = React.createRef()
   }
@@ -217,7 +231,7 @@ class TopBar extends React.Component {
         this.props.specActions.updateUrl("")
         this.props.specActions.updateSpec(fileContent)
         this.props.specActions.updateLoadingStatus("success")
-        this.setState({ currentGistId: null, currentGistFilename: null })
+        this.setState({ currentGistId: null, currentGistFilename: null, lastSavedSpec: null })
       } catch (error) {
         const { errActions } = this.props
         if (errActions) {
@@ -304,6 +318,7 @@ class TopBar extends React.Component {
   }
 
   fetchGitHubUser = async (token) => {
+    this.setState({ authLoading: true })
     try {
       const res = await fetch(`${GITHUB_API}/user`, {
         headers: { Authorization: `Bearer ${token}` },
@@ -316,6 +331,8 @@ class TopBar extends React.Component {
       }
     } catch {
       // transient network error -- keep token, don't sign out
+    } finally {
+      this.setState({ authLoading: false })
     }
   }
 
@@ -342,6 +359,7 @@ class TopBar extends React.Component {
     const clientId = this.getClientId()
     if (!proxyUrl || !clientId) return
 
+    this.setState({ authLoading: true })
     try {
       const res = await fetch(`${proxyUrl}/api/token`, {
         method: "POST",
@@ -357,6 +375,8 @@ class TopBar extends React.Component {
       }
     } catch (err) {
       console.error("OAuth token exchange failed:", err)
+    } finally {
+      this.setState({ authLoading: false })
     }
   }
 
@@ -369,6 +389,7 @@ class TopBar extends React.Component {
       currentGistFilename: null,
       showGistPicker: false,
       gistList: [],
+      lastSavedSpec: null,
     })
   }
 
@@ -409,7 +430,7 @@ class TopBar extends React.Component {
     const { githubToken } = this.state
     if (!githubToken) return
 
-    this.setState({ showGistPicker: false })
+    this.setState({ showGistPicker: false, gistOpening: true })
 
     try {
       const res = await fetch(`${GITHUB_API}/gists/${gistId}`, {
@@ -434,9 +455,15 @@ class TopBar extends React.Component {
       this.props.specActions.updateUrl("")
       this.props.specActions.updateSpec(fileContent)
       this.props.specActions.updateLoadingStatus("success")
-      this.setState({ currentGistId: gistId, currentGistFilename: specFilename })
+      this.setState({
+        currentGistId: gistId,
+        currentGistFilename: specFilename,
+        lastSavedSpec: fileContent,
+      })
     } catch (err) {
       console.error("Failed to open gist:", err)
+    } finally {
+      this.setState({ gistOpening: false })
     }
   }
 
@@ -454,8 +481,14 @@ class TopBar extends React.Component {
     }
     if (!specText) return
 
-    const filename = currentGistFilename || "openapi.json"
+    let filename = currentGistFilename
+    if (!filename) {
+      const specJson = specSelectors.specJson()
+      const title = specJson && specJson.getIn(["info", "title"])
+      filename = titleToGistFilename(title)
+    }
 
+    this.setState({ gistSaving: true })
     try {
       if (currentGistId) {
         const res = await fetch(`${GITHUB_API}/gists/${currentGistId}`, {
@@ -468,7 +501,11 @@ class TopBar extends React.Component {
             files: { [filename]: { content: specText } },
           }),
         })
-        if (!res.ok && res.status === 401) this.signOut()
+        if (res.ok) {
+          this.setState({ lastSavedSpec: specText })
+        } else if (res.status === 401) {
+          this.signOut()
+        }
       } else {
         const res = await fetch(`${GITHUB_API}/gists`, {
           method: "POST",
@@ -485,13 +522,19 @@ class TopBar extends React.Component {
 
         if (res.ok) {
           const gist = await res.json()
-          this.setState({ currentGistId: gist.id, currentGistFilename: filename })
+          this.setState({
+            currentGistId: gist.id,
+            currentGistFilename: filename,
+            lastSavedSpec: specText,
+          })
         } else if (res.status === 401) {
           this.signOut()
         }
       }
     } catch (err) {
       console.error("Failed to save gist:", err)
+    } finally {
+      this.setState({ gistSaving: false })
     }
   }
 
@@ -525,7 +568,23 @@ class TopBar extends React.Component {
       gistList,
       gistListLoading,
       currentGistId,
+      authLoading,
+      gistSaving,
+      gistOpening,
+      lastSavedSpec,
     } = this.state
+
+    let saveButtonClass = "topbar-btn"
+    if (currentGistId) {
+      const currentSpec = specSelectors.specStr() || ""
+      if (lastSavedSpec !== null && currentSpec !== lastSavedSpec) {
+        saveButtonClass = "topbar-btn topbar-btn--dirty"
+      } else {
+        saveButtonClass = "topbar-btn topbar-btn--clean"
+      }
+    }
+
+    const spinner = <span className="topbar-spinner" />
 
     return (
       <div className="topbar">
@@ -544,24 +603,30 @@ class TopBar extends React.Component {
               accept="application/json,.json,.yaml,.yml"
               style={{ display: "none" }}
             />
-            <Button className="download-spec-button" onClick={this.handleUploadClick}>Upload</Button>
-            <Button className="download-spec-button" onClick={ this.downloadCurrentSpec }>Download</Button>
+            <Button className="topbar-btn" onClick={this.handleUploadClick}>Upload</Button>
+            <Button className="topbar-btn" onClick={this.downloadCurrentSpec}>Download</Button>
+
+            <div className="topbar-separator" />
 
             <div className="github-section">
               {!githubToken && (
-                <Button className="github-btn github-signin-btn" onClick={this.signInWithGitHub}>
-                  Sign in with GitHub
+                <Button className="topbar-btn" onClick={this.signInWithGitHub} disabled={authLoading}>
+                  Sign in with GitHub{authLoading && spinner}
                 </Button>
+              )}
+
+              {githubToken && !githubUser && authLoading && (
+                <span className="topbar-spinner" />
               )}
 
               {githubToken && githubUser && (
                 <div className="github-user-section">
                   <span className="github-username">{githubUser}</span>
-                  <Button className="github-btn" onClick={this.loadGistList}>
-                    Load from Gist
+                  <Button className="topbar-btn" onClick={this.loadGistList} disabled={gistListLoading || gistOpening}>
+                    Load from Gist{(gistListLoading || gistOpening) && spinner}
                   </Button>
-                  <Button className="github-btn" onClick={this.saveToGist}>
-                    {currentGistId ? "Save to Gist" : "Save as Gist"}
+                  <Button className={saveButtonClass} onClick={this.saveToGist} disabled={gistSaving}>
+                    {currentGistId ? "Save to Gist" : "Save as Gist"}{gistSaving && spinner}
                   </Button>
                   <button className="github-signout" onClick={this.signOut}>Sign out</button>
                 </div>
