@@ -135,43 +135,6 @@
     padding: 5px 16px;
   }
 
-  .github-device-flow {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-
-    .device-code {
-      font-family: monospace;
-      font-size: 18px;
-      font-weight: bold;
-      letter-spacing: 2px;
-      color: #fff;
-      background: rgba(255, 255, 255, 0.15);
-      padding: 3px 10px;
-      border-radius: 4px;
-      user-select: all;
-    }
-
-    .device-hint {
-      font-size: 13px;
-      color: rgba(255, 255, 255, 0.8);
-
-      a {
-        color: #fff;
-        font-size: inherit;
-        font-weight: normal;
-        text-decoration: underline;
-        max-width: none;
-        flex: none;
-      }
-    }
-  }
-
-  .github-loading {
-    font-size: 13px;
-    color: rgba(255, 255, 255, 0.7);
-  }
-
   .github-user-section {
     display: flex;
     align-items: center;
@@ -313,10 +276,6 @@
     .github-section {
       margin-left: 0;
       flex-wrap: wrap;
-    }
-    .github-device-flow {
-      flex-direction: column;
-      align-items: start;
     }
     .github-user-section {
       flex-wrap: wrap;

@@ -26,15 +26,11 @@ class TopBar extends React.Component {
       githubUser: null,
       currentGistId: null,
       currentGistFilename: null,
-      deviceFlowPending: false,
-      deviceUserCode: null,
-      deviceVerificationUri: null,
       showGistPicker: false,
       gistList: [],
       gistListLoading: false,
     }
     this.fileInputRef = React.createRef()
-    this._pollTimer = null
   }
 
   componentDidMount() {
@@ -59,14 +55,10 @@ class TopBar extends React.Component {
       this.loadSpec(urls[targetIndex].url)
     }
 
+    this.handleOAuthCallback()
+
     if (this.state.githubToken) {
       this.fetchGitHubUser(this.state.githubToken)
-    }
-  }
-
-  componentWillUnmount() {
-    if (this._pollTimer) {
-      clearTimeout(this._pollTimer)
     }
   }
 
@@ -299,7 +291,7 @@ class TopBar extends React.Component {
     this.props.layoutActions.updateFilter(value)
   }
 
-  // ── GitHub Device Flow Auth ──
+  // ── GitHub OAuth Web Flow ──
 
   getProxyUrl = () => {
     const { githubProxyUrl } = this.props.getConfigs()
@@ -327,107 +319,54 @@ class TopBar extends React.Component {
     }
   }
 
-  startDeviceFlow = async () => {
-    const proxyUrl = this.getProxyUrl()
+  signInWithGitHub = () => {
     const clientId = this.getClientId()
-    if (!proxyUrl || !clientId) {
-      console.error("githubProxyUrl and githubClientId must be configured")
+    if (!clientId) {
+      console.error("githubClientId must be configured")
       return
     }
+    const redirectUri = window.location.origin + window.location.pathname
+    const authUrl = `https://github.com/login/oauth/authorize?client_id=${clientId}&scope=gist&redirect_uri=${encodeURIComponent(redirectUri)}`
+    window.location.href = authUrl
+  }
 
-    this.setState({ deviceFlowPending: true, deviceUserCode: null, deviceVerificationUri: null })
+  handleOAuthCallback = async () => {
+    const params = new URLSearchParams(window.location.search)
+    const code = params.get("code")
+    if (!code) return
+
+    const cleanUrl = window.location.origin + window.location.pathname
+    window.history.replaceState(null, "", cleanUrl)
+
+    const proxyUrl = this.getProxyUrl()
+    const clientId = this.getClientId()
+    if (!proxyUrl || !clientId) return
 
     try {
-      const res = await fetch(`${proxyUrl}/login/device/code`, {
+      const res = await fetch(`${proxyUrl}/api/token`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ client_id: clientId, scope: "gist" }),
+        body: JSON.stringify({ code, client_id: clientId }),
       })
       const data = await res.json()
 
-      this.setState({
-        deviceUserCode: data.user_code,
-        deviceVerificationUri: data.verification_uri,
-      })
-
-      window.open(data.verification_uri, "_blank")
-
-      this.pollForToken(data.device_code, data.interval || 5, data.expires_in || 900)
+      if (data.access_token) {
+        localStorage.setItem(LOCALSTORAGE_TOKEN_KEY, data.access_token)
+        this.setState({ githubToken: data.access_token })
+        this.fetchGitHubUser(data.access_token)
+      }
     } catch (err) {
-      console.error("Device flow start failed:", err)
-      this.setState({ deviceFlowPending: false })
+      console.error("OAuth token exchange failed:", err)
     }
-  }
-
-  pollForToken = (deviceCode, initialInterval, expiresIn) => {
-    const proxyUrl = this.getProxyUrl()
-    const clientId = this.getClientId()
-    const startTime = Date.now()
-    let currentInterval = initialInterval
-
-    const poll = async () => {
-      if (Date.now() - startTime > expiresIn * 1000) {
-        this._pollTimer = null
-        this.setState({ deviceFlowPending: false, deviceUserCode: null, deviceVerificationUri: null })
-        return
-      }
-
-      try {
-        const res = await fetch(`${proxyUrl}/login/oauth/access_token`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            client_id: clientId,
-            device_code: deviceCode,
-            grant_type: "urn:ietf:params:oauth:grant-type:device_code",
-          }),
-        })
-        const data = await res.json()
-
-        if (data.access_token) {
-          this._pollTimer = null
-          localStorage.setItem(LOCALSTORAGE_TOKEN_KEY, data.access_token)
-          this.setState({
-            githubToken: data.access_token,
-            deviceFlowPending: false,
-            deviceUserCode: null,
-            deviceVerificationUri: null,
-          })
-          this.fetchGitHubUser(data.access_token)
-          return
-        }
-
-        if (data.error === "slow_down") {
-          currentInterval = (data.interval || currentInterval + 5)
-        } else if (data.error === "expired_token" || data.error === "access_denied") {
-          this._pollTimer = null
-          this.setState({ deviceFlowPending: false, deviceUserCode: null, deviceVerificationUri: null })
-          return
-        }
-      } catch {
-        // transient error, keep polling
-      }
-
-      this._pollTimer = setTimeout(poll, currentInterval * 1000)
-    }
-
-    this._pollTimer = setTimeout(poll, currentInterval * 1000)
   }
 
   signOut = () => {
-    if (this._pollTimer) {
-      clearTimeout(this._pollTimer)
-      this._pollTimer = null
-    }
     localStorage.removeItem(LOCALSTORAGE_TOKEN_KEY)
     this.setState({
       githubToken: null,
       githubUser: null,
       currentGistId: null,
       currentGistFilename: null,
-      deviceFlowPending: false,
-      deviceUserCode: null,
-      deviceVerificationUri: null,
       showGistPicker: false,
       gistList: [],
     })
@@ -582,8 +521,6 @@ class TopBar extends React.Component {
     const {
       githubToken,
       githubUser,
-      deviceFlowPending,
-      deviceUserCode,
       showGistPicker,
       gistList,
       gistListLoading,
@@ -611,26 +548,10 @@ class TopBar extends React.Component {
             <Button className="download-spec-button" onClick={ this.downloadCurrentSpec }>Download</Button>
 
             <div className="github-section">
-              {!githubToken && !deviceFlowPending && (
-                <Button className="github-btn github-signin-btn" onClick={this.startDeviceFlow}>
+              {!githubToken && (
+                <Button className="github-btn github-signin-btn" onClick={this.signInWithGitHub}>
                   Sign in with GitHub
                 </Button>
-              )}
-
-              {deviceFlowPending && deviceUserCode && (
-                <div className="github-device-flow">
-                  <span className="device-code">{deviceUserCode}</span>
-                  <span className="device-hint">
-                    Enter this code at{" "}
-                    <a href="https://github.com/login/device" target="_blank" rel="noopener noreferrer">
-                      github.com/login/device
-                    </a>
-                  </span>
-                </div>
-              )}
-
-              {deviceFlowPending && !deviceUserCode && (
-                <span className="github-loading">Connecting...</span>
               )}
 
               {githubToken && githubUser && (
