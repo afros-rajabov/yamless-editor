@@ -1,5 +1,3 @@
-const ALLOWED_PATHS = ["/login/device/code", "/login/oauth/access_token"]
-
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
@@ -7,25 +5,30 @@ const CORS_HEADERS = {
 }
 
 export default {
-  async fetch(request) {
+  async fetch(request, env) {
     if (request.method === "OPTIONS") {
       return new Response(null, { status: 204, headers: CORS_HEADERS })
     }
 
     const url = new URL(request.url)
 
-    if (request.method !== "POST" || !ALLOWED_PATHS.includes(url.pathname)) {
+    if (request.method !== "POST" || url.pathname !== "/api/token") {
       return new Response("Not found", { status: 404, headers: CORS_HEADERS })
     }
 
-    const body = await request.text()
-    const ghResponse = await fetch(`https://github.com${url.pathname}`, {
+    const { code, client_id } = await request.json()
+
+    const ghResponse = await fetch("https://github.com/login/oauth/access_token", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         "Accept": "application/json",
       },
-      body,
+      body: JSON.stringify({
+        client_id,
+        client_secret: env.GITHUB_CLIENT_SECRET,
+        code,
+      }),
     })
 
     const responseBody = await ghResponse.text()
