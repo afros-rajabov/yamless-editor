@@ -6,6 +6,9 @@ import YAML, { JSON_SCHEMA } from "js-yaml"
 import {parseSearch, serializeSearch} from "core/utils"
 import { isOAS31 } from "core/plugins/oas31/fn"
 
+const GITHUB_API = "https://api.github.com"
+const LOCALSTORAGE_TOKEN_KEY = "yamless_github_token"
+
 class TopBar extends React.Component {
 
   static propTypes = {
@@ -15,13 +18,63 @@ class TopBar extends React.Component {
 
   constructor(props, context) {
     super(props, context)
-    this.state = { url: props.specSelectors.url(), selectedIndex: 0 }
+    const savedToken = localStorage.getItem(LOCALSTORAGE_TOKEN_KEY) || null
+    this.state = {
+      url: props.specSelectors.url(),
+      selectedIndex: 0,
+      githubToken: savedToken,
+      githubUser: null,
+      currentGistId: null,
+      currentGistFilename: null,
+      deviceFlowPending: false,
+      deviceUserCode: null,
+      deviceVerificationUri: null,
+      showGistPicker: false,
+      gistList: [],
+      gistListLoading: false,
+    }
     this.fileInputRef = React.createRef()
+    this._pollTimer = null
+  }
+
+  componentDidMount() {
+    const configs = this.props.getConfigs()
+    const urls = configs.urls || []
+
+    if(urls && urls.length) {
+      var targetIndex = this.state.selectedIndex
+      let search = parseSearch()
+      let primaryName = search["urls.primaryName"] || configs.urls.primaryName
+      if(primaryName)
+      {
+        urls.forEach((spec, i) => {
+          if(spec.name === primaryName)
+            {
+              this.setState({selectedIndex: i})
+              targetIndex = i
+            }
+        })
+      }
+
+      this.loadSpec(urls[targetIndex].url)
+    }
+
+    if (this.state.githubToken) {
+      this.fetchGitHubUser(this.state.githubToken)
+    }
+  }
+
+  componentWillUnmount() {
+    if (this._pollTimer) {
+      clearInterval(this._pollTimer)
+    }
   }
 
   UNSAFE_componentWillReceiveProps(nextProps) {
     this.setState({ url: nextProps.specSelectors.url() })
   }
+
+  // ── Existing spec helpers ──
 
   onUrlChange =(e)=> {
     let {target: {value}} = e
@@ -102,7 +155,6 @@ class TopBar extends React.Component {
       return
     }
 
-    // Check file extension
     const fileName = file.name.toLowerCase()
     const isJson = fileName.endsWith('.json')
     const isYaml = fileName.endsWith('.yaml') || fileName.endsWith('.yml')
@@ -116,7 +168,6 @@ class TopBar extends React.Component {
           message: "Invalid file type. Please upload a JSON or YAML file."
         })
       }
-      // Reset file input
       e.target.value = ''
       return
     }
@@ -126,7 +177,6 @@ class TopBar extends React.Component {
       try {
         const fileContent = event.target.result
 
-        // Parse the file content to validate it's valid JSON/YAML
         let parsedJson = null
         try {
           parsedJson = YAML.load(fileContent, { schema: JSON_SCHEMA })
@@ -139,12 +189,10 @@ class TopBar extends React.Component {
               message: `Failed to parse file: ${parseError.message || "Invalid JSON or YAML format"}`
             })
           }
-          // Reset file input
           e.target.value = ''
           return
         }
 
-        // Validate it's an object
         if (!parsedJson || typeof parsedJson !== "object") {
           const { errActions } = this.props
           if (errActions) {
@@ -154,15 +202,12 @@ class TopBar extends React.Component {
               message: "Invalid specification format. The file must contain a valid OpenAPI specification object."
             })
           }
-          // Reset file input
           e.target.value = ''
           return
         }
 
-        // Convert to Immutable Map for validation
         const jsSpec = ImmutableMap(parsedJson)
 
-        // Validate it's OAS 3.1 before updating
         if (!isOAS31(jsSpec)) {
           const { errActions } = this.props
           if (errActions) {
@@ -172,16 +217,15 @@ class TopBar extends React.Component {
               message: "Invalid OpenAPI version. Only OpenAPI 3.1 specifications are supported. Please ensure your spec has 'openapi: 3.1.x'."
             })
           }
-          // Reset file input
           e.target.value = ''
           return
         }
 
-        // All validations passed - update the spec
         this.flushAuthData()
         this.props.specActions.updateUrl("")
         this.props.specActions.updateSpec(fileContent)
         this.props.specActions.updateLoadingStatus("success")
+        this.setState({ currentGistId: null, currentGistFilename: null })
       } catch (error) {
         const { errActions } = this.props
         if (errActions) {
@@ -191,7 +235,6 @@ class TopBar extends React.Component {
             message: `Failed to process file: ${error.message}`
           })
         }
-        // Reset file input
         e.target.value = ''
       }
     }
@@ -205,7 +248,6 @@ class TopBar extends React.Component {
           message: "Failed to read file. Please try again."
         })
       }
-      // Reset file input
       e.target.value = ''
     }
 
@@ -252,33 +294,261 @@ class TopBar extends React.Component {
     }
   }
 
-  componentDidMount() {
-    const configs = this.props.getConfigs()
-    const urls = configs.urls || []
-
-    if(urls && urls.length) {
-      var targetIndex = this.state.selectedIndex
-      let search = parseSearch()
-      let primaryName = search["urls.primaryName"] || configs.urls.primaryName
-      if(primaryName)
-      {
-        urls.forEach((spec, i) => {
-          if(spec.name === primaryName)
-            {
-              this.setState({selectedIndex: i})
-              targetIndex = i
-            }
-        })
-      }
-
-      this.loadSpec(urls[targetIndex].url)
-    }
-  }
-
   onFilterChange =(e) => {
     let {target: {value}} = e
     this.props.layoutActions.updateFilter(value)
   }
+
+  // ── GitHub Device Flow Auth ──
+
+  getProxyUrl = () => {
+    const { githubProxyUrl } = this.props.getConfigs()
+    return githubProxyUrl || ""
+  }
+
+  getClientId = () => {
+    const { githubClientId } = this.props.getConfigs()
+    return githubClientId || ""
+  }
+
+  fetchGitHubUser = async (token) => {
+    try {
+      const res = await fetch(`${GITHUB_API}/user`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (res.ok) {
+        const user = await res.json()
+        this.setState({ githubUser: user.login })
+      } else {
+        this.signOut()
+      }
+    } catch {
+      this.signOut()
+    }
+  }
+
+  startDeviceFlow = async () => {
+    const proxyUrl = this.getProxyUrl()
+    const clientId = this.getClientId()
+    if (!proxyUrl || !clientId) {
+      console.error("githubProxyUrl and githubClientId must be configured")
+      return
+    }
+
+    this.setState({ deviceFlowPending: true, deviceUserCode: null, deviceVerificationUri: null })
+
+    try {
+      const res = await fetch(`${proxyUrl}/login/device/code`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ client_id: clientId, scope: "gist" }),
+      })
+      const data = await res.json()
+
+      this.setState({
+        deviceUserCode: data.user_code,
+        deviceVerificationUri: data.verification_uri,
+      })
+
+      window.open(data.verification_uri, "_blank")
+
+      this.pollForToken(data.device_code, data.interval || 5, data.expires_in || 900)
+    } catch (err) {
+      console.error("Device flow start failed:", err)
+      this.setState({ deviceFlowPending: false })
+    }
+  }
+
+  pollForToken = (deviceCode, interval, expiresIn) => {
+    const proxyUrl = this.getProxyUrl()
+    const clientId = this.getClientId()
+    const startTime = Date.now()
+
+    this._pollTimer = setInterval(async () => {
+      if (Date.now() - startTime > expiresIn * 1000) {
+        clearInterval(this._pollTimer)
+        this._pollTimer = null
+        this.setState({ deviceFlowPending: false, deviceUserCode: null, deviceVerificationUri: null })
+        return
+      }
+
+      try {
+        const res = await fetch(`${proxyUrl}/login/oauth/access_token`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            client_id: clientId,
+            device_code: deviceCode,
+            grant_type: "urn:ietf:params:oauth:grant-type:device_code",
+          }),
+        })
+        const data = await res.json()
+
+        if (data.access_token) {
+          clearInterval(this._pollTimer)
+          this._pollTimer = null
+          localStorage.setItem(LOCALSTORAGE_TOKEN_KEY, data.access_token)
+          this.setState({
+            githubToken: data.access_token,
+            deviceFlowPending: false,
+            deviceUserCode: null,
+            deviceVerificationUri: null,
+          })
+          this.fetchGitHubUser(data.access_token)
+        }
+      } catch {
+        // keep polling
+      }
+    }, interval * 1000)
+  }
+
+  signOut = () => {
+    if (this._pollTimer) {
+      clearInterval(this._pollTimer)
+      this._pollTimer = null
+    }
+    localStorage.removeItem(LOCALSTORAGE_TOKEN_KEY)
+    this.setState({
+      githubToken: null,
+      githubUser: null,
+      currentGistId: null,
+      currentGistFilename: null,
+      deviceFlowPending: false,
+      deviceUserCode: null,
+      deviceVerificationUri: null,
+      showGistPicker: false,
+      gistList: [],
+    })
+  }
+
+  // ── Gist Operations ──
+
+  loadGistList = async () => {
+    const { githubToken } = this.state
+    if (!githubToken) return
+
+    this.setState({ gistListLoading: true, showGistPicker: true, gistList: [] })
+
+    try {
+      const res = await fetch(`${GITHUB_API}/gists?per_page=50`, {
+        headers: { Authorization: `Bearer ${githubToken}` },
+      })
+
+      if (!res.ok) {
+        if (res.status === 401) this.signOut()
+        this.setState({ gistListLoading: false })
+        return
+      }
+
+      const gists = await res.json()
+      const specGists = gists.filter((g) => {
+        const filenames = Object.keys(g.files || {})
+        return filenames.some(
+          (f) => f.endsWith(".json") || f.endsWith(".yaml") || f.endsWith(".yml")
+        )
+      })
+
+      this.setState({ gistList: specGists, gistListLoading: false })
+    } catch {
+      this.setState({ gistListLoading: false })
+    }
+  }
+
+  openGist = async (gistId) => {
+    const { githubToken } = this.state
+    if (!githubToken) return
+
+    this.setState({ showGistPicker: false })
+
+    try {
+      const res = await fetch(`${GITHUB_API}/gists/${gistId}`, {
+        headers: { Authorization: `Bearer ${githubToken}` },
+      })
+      if (!res.ok) {
+        if (res.status === 401) this.signOut()
+        return
+      }
+
+      const gist = await res.json()
+      const files = gist.files || {}
+      const specFilename = Object.keys(files).find(
+        (f) => f.endsWith(".json") || f.endsWith(".yaml") || f.endsWith(".yml")
+      )
+
+      if (!specFilename) return
+
+      const fileContent = files[specFilename].content
+
+      this.flushAuthData()
+      this.props.specActions.updateUrl("")
+      this.props.specActions.updateSpec(fileContent)
+      this.props.specActions.updateLoadingStatus("success")
+      this.setState({ currentGistId: gistId, currentGistFilename: specFilename })
+    } catch (err) {
+      console.error("Failed to open gist:", err)
+    }
+  }
+
+  saveToGist = async () => {
+    const { githubToken, currentGistId, currentGistFilename } = this.state
+    if (!githubToken) return
+
+    const { specSelectors } = this.props
+    let specText = specSelectors.specStr()
+    if (!specText) {
+      const specJson = specSelectors.specJson()
+      if (specJson && typeof specJson.toJS === "function") {
+        specText = JSON.stringify(specJson.toJS(), null, 2)
+      }
+    }
+    if (!specText) return
+
+    const filename = currentGistFilename || "openapi.json"
+
+    try {
+      if (currentGistId) {
+        const res = await fetch(`${GITHUB_API}/gists/${currentGistId}`, {
+          method: "PATCH",
+          headers: {
+            Authorization: `Bearer ${githubToken}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            files: { [filename]: { content: specText } },
+          }),
+        })
+        if (!res.ok && res.status === 401) this.signOut()
+      } else {
+        const res = await fetch(`${GITHUB_API}/gists`, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${githubToken}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            description: "YAMLess OpenAPI Spec",
+            public: false,
+            files: { [filename]: { content: specText } },
+          }),
+        })
+
+        if (res.ok) {
+          const gist = await res.json()
+          this.setState({ currentGistId: gist.id, currentGistFilename: filename })
+        } else if (res.status === 401) {
+          this.signOut()
+        }
+      }
+    } catch (err) {
+      console.error("Failed to save gist:", err)
+    }
+  }
+
+  closeGistPicker = () => {
+    this.setState({ showGistPicker: false })
+  }
+
+  // ── Render ──
 
   render() {
     let { getComponent, specSelectors, getConfigs } = this.props
@@ -297,34 +567,16 @@ class TopBar extends React.Component {
     let control = []
     let formOnSubmit = null
 
-    // if(urls) {
-    //   let rows = []
-    //   urls.forEach((link, i) => {
-    //     rows.push(<option key={i} value={link.url}>{link.name}</option>)
-    //   })
-
-    //   control.push(
-    //     <label className="select-label" htmlFor="select"><span>Select a definition</span>
-    //       <select id="select" disabled={isLoading} onChange={ this.onUrlSelect } value={urls[this.state.selectedIndex].url}>
-    //         {rows}
-    //       </select>
-    //     </label>
-    //   )
-    // }
-    // else {
-    //   formOnSubmit = this.downloadUrl
-    //   control.push(
-    //     <input
-    //       className={classNames.join(" ")}
-    //       type="text"
-    //       onChange={this.onUrlChange}
-    //       value={this.state.url}
-    //       disabled={isLoading}
-    //       id="download-url-input"
-    //     />
-    //   )
-    //   control.push(<Button className="download-url-button" onClick={ this.downloadUrl }>Explore</Button>)
-    // }
+    const {
+      githubToken,
+      githubUser,
+      deviceFlowPending,
+      deviceUserCode,
+      showGistPicker,
+      gistList,
+      gistListLoading,
+      currentGistId,
+    } = this.state
 
     return (
       <div className="topbar">
@@ -345,6 +597,81 @@ class TopBar extends React.Component {
             />
             <Button className="download-spec-button" onClick={this.handleUploadClick}>Upload</Button>
             <Button className="download-spec-button" onClick={ this.downloadCurrentSpec }>Download</Button>
+
+            <div className="github-section">
+              {!githubToken && !deviceFlowPending && (
+                <Button className="github-btn github-signin-btn" onClick={this.startDeviceFlow}>
+                  Sign in with GitHub
+                </Button>
+              )}
+
+              {deviceFlowPending && deviceUserCode && (
+                <div className="github-device-flow">
+                  <span className="device-code">{deviceUserCode}</span>
+                  <span className="device-hint">
+                    Enter this code at{" "}
+                    <a href="https://github.com/login/device" target="_blank" rel="noopener noreferrer">
+                      github.com/login/device
+                    </a>
+                  </span>
+                </div>
+              )}
+
+              {deviceFlowPending && !deviceUserCode && (
+                <span className="github-loading">Connecting...</span>
+              )}
+
+              {githubToken && githubUser && (
+                <div className="github-user-section">
+                  <span className="github-username">{githubUser}</span>
+                  <Button className="github-btn" onClick={this.loadGistList}>
+                    Load from Gist
+                  </Button>
+                  <Button className="github-btn" onClick={this.saveToGist}>
+                    {currentGistId ? "Save to Gist" : "Save as Gist"}
+                  </Button>
+                  <button className="github-signout" onClick={this.signOut}>Sign out</button>
+                </div>
+              )}
+
+              {showGistPicker && (
+                <div className="gist-picker-overlay" onClick={this.closeGistPicker}>
+                  <div className="gist-picker" onClick={(e) => e.stopPropagation()}>
+                    <div className="gist-picker-header">
+                      <span>Select a Gist</span>
+                      <button className="gist-picker-close" onClick={this.closeGistPicker}>&times;</button>
+                    </div>
+                    <div className="gist-picker-list">
+                      {gistListLoading && <div className="gist-picker-loading">Loading...</div>}
+                      {!gistListLoading && gistList.length === 0 && (
+                        <div className="gist-picker-empty">No spec gists found</div>
+                      )}
+                      {gistList.map((gist) => {
+                        const files = Object.keys(gist.files || {})
+                        const specFile = files.find(
+                          (f) => f.endsWith(".json") || f.endsWith(".yaml") || f.endsWith(".yml")
+                        )
+                        return (
+                          <button
+                            key={gist.id}
+                            className="gist-picker-item"
+                            onClick={() => this.openGist(gist.id)}
+                          >
+                            <span className="gist-picker-filename">{specFile}</span>
+                            <span className="gist-picker-desc">
+                              {gist.description || "No description"}
+                            </span>
+                            <span className="gist-picker-date">
+                              {new Date(gist.updated_at).toLocaleDateString()}
+                            </span>
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>

@@ -29,7 +29,9 @@ window.onload = function () {
       SwaggerUIBundle.plugins.DownloadUrl
     ],
     requestSnippetsEnabled: true,
-    layout: "StandaloneLayout"
+    layout: "StandaloneLayout",
+    githubClientId: "Ov23lius6lXEEc1T3DvA",
+    githubProxyUrl: "https://yamless-github-proxy.afrosrajabov1207.workers.dev"
   })
 
   window.ui = ui
