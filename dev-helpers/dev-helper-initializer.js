@@ -1,10 +1,24 @@
 /* eslint-disable no-undef */
-window.onload = function() {
+window.onload = function () {
   window["SwaggerUIBundle"] = window["swagger-ui-bundle"]
   window["SwaggerUIStandalonePreset"] = window["swagger-ui-standalone-preset"]
   // Build a system
   const ui = SwaggerUIBundle({
-    url: "https://fs-main.estesis.tech/backend/api/v1/openapi.json",
+    spec: {
+      openapi: "3.1.0",
+      info: {
+        title: "[MY API}",
+        description: "Default Description",
+        version: "1.0.0"
+      },
+      servers: [],
+      paths: {},
+      components: {
+        schemas: {}
+      },
+      security: [],
+      tags: []
+    },
     dom_id: "#swagger-ui",
     deepLinking: true,
     presets: [
