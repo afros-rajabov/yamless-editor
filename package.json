@@ -1,5 +1,5 @@
 {
-  "name": "swagger-ui",
+  "name": "yamless-editor",
   "version": "5.29.4",
   "main": "./dist/swagger-ui.js",
   "module": "./dist/swagger-ui-es-bundle-core.js",
@@ -22,21 +22,8 @@
       }
     }
   },
-  "homepage": "https://github.com/swagger-api/swagger-ui",
-  "repository": "git@github.com:swagger-api/swagger-ui.git",
-  "contributors": [
-    "(in alphabetical order)",
-    "Anna Bodnia <anna.bodnia@gmail.com>",
-    "Buu Nguyen <buunguyen@gmail.com>",
-    "Josh Ponelat <jponelat@gmail.com>",
-    "Kyle Shockey <kyleshockey@gmail.com>",
-    "Robert Barnwell <robert@robertismy.name>",
-    "Sahar Jafari <shr.jafari@gmail.com>",
-    "Vladimir Gorej <vladimir.gorej@gmail.com>"
-  ],
   "license": "Apache-2.0",
   "scripts": {
-    "automated-release": "release-it -VV --config ./release/.release-it.json",
     "build": "npm run build-stylesheets && rimraf ./dist/swagger-ui.js ./dist/swagger-ui.js.map && npm run build-all-bundles",
     "build-all-bundles": "run-p --aggregate-output build:core build:bundle build:standalone build:es:bundle build:es:bundle:core",
     "build-stylesheets": "cross-env NODE_ENV=production BABEL_ENV=production BROWSERSLIST_ENV=browser-production webpack --color --config webpack/stylesheets.js && shx sed -i \"s/\\*zoom/zoom/g\" ./dist/swagger-ui.css",
@@ -55,20 +42,7 @@
     "lint-fix": "eslint --ext \".js,.jsx\" src test dev-helpers flavors --fix",
     "lint-styles": "stylelint \"**/*.scss\"",
     "lint-styles-fix": "stylelint \"**/*.scss\" --fix",
-    "test": "run-s lint-errors test:unit cy:ci",
-    "test:artifact": "cross-env NODE_ENV=production BABEL_ENV=commonjs BROWSERSLIST_ENV=node-development jest --config ./config/jest/jest.artifact.config.js",
-    "test:unit": "cross-env NODE_ENV=test BABEL_ENV=commonjs BROWSERSLIST_ENV=node-development jest --config ./config/jest/jest.unit.config.js",
-    "cy:mock-api": "json-server --watch test/e2e-selenium/db.json --port 3204",
-    "cy:server": "cross-env NODE_ENV=production BABEL_ENV=production BROWSERSLIST_ENV=browser-production webpack serve --config webpack/dev-e2e.js",
-    "cy:start": "run-p -r cy:server cy:mock-api",
-    "cy:open": "cross-env BROWSERSLIST_ENV=browser-production cypress open",
-    "cy:run": "cross-env BROWSERSLIST_ENV=browser-production cypress run",
-    "cy:ci": "start-server-and-test cy:start http://localhost:3204 cy:run",
-    "cy:dev": "start-server-and-test cy:start http://localhost:3204 cy:open",
     "open-static": "npx open-cli http://localhost:3002",
-    "security-audit": "run-s -sc security-audit:all security-audit:prod",
-    "security-audit:prod": "npm-audit-ci-wrapper -p -t low",
-    "security-audit:all": "npm-audit-ci-wrapper -t moderate",
     "serve-static": "ws -d dist/ --hostname 0.0.0.0 -p 3002",
     "start": "npm-run-all --parallel serve-static open-static"
   },

@@ -7,7 +7,7 @@ window.onload = function () {
     spec: {
       openapi: "3.1.0",
       info: {
-        title: "[MY API}",
+        title: "[MY API]",
         description: "## Default Description",
         version: "1.0.0"
       },
