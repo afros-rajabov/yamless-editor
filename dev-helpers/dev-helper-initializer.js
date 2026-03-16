@@ -8,7 +8,7 @@ window.onload = function () {
       openapi: "3.1.0",
       info: {
         title: "[MY API}",
-        description: "Default Description",
+        description: "## Default Description",
         version: "1.0.0"
       },
       servers: [],
