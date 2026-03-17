@@ -30,6 +30,7 @@ class TopBar extends React.Component {
     super(props, context)
     const savedToken = localStorage.getItem(LOCALSTORAGE_TOKEN_KEY) || null
     this.state = {
+      isTopbarVisible: false,
       url: props.specSelectors.url(),
       selectedIndex: 0,
       githubToken: savedToken,
@@ -45,6 +46,7 @@ class TopBar extends React.Component {
       lastSavedSpec: null,
     }
     this.fileInputRef = React.createRef()
+    this._onKeyDown = this.onKeyDown.bind(this)
   }
 
   componentDidMount() {
@@ -69,11 +71,17 @@ class TopBar extends React.Component {
       this.loadSpec(urls[targetIndex].url)
     }
 
+    window.addEventListener("keydown", this._onKeyDown)
+
     this.handleOAuthCallback()
 
     if (this.state.githubToken) {
       this.fetchGitHubUser(this.state.githubToken)
     }
+  }
+
+  componentWillUnmount() {
+    window.removeEventListener("keydown", this._onKeyDown)
   }
 
   UNSAFE_componentWillReceiveProps(nextProps) {
@@ -306,6 +314,47 @@ class TopBar extends React.Component {
   }
 
   // ── GitHub OAuth Web Flow ──
+
+  isEditableTarget = (target) => {
+    if (!target) return false
+    const tag = (target.tagName || "").toLowerCase()
+    if (tag === "input" || tag === "textarea" || tag === "select") return true
+    if (target.isContentEditable) return true
+    return false
+  }
+
+  onKeyDown(e) {
+    const { topbarToggleKey } = this.props.getConfigs()
+    const combo = (topbarToggleKey || "ctrl+shift+b").toLowerCase().replace(/\s+/g, "")
+
+    if (this.isEditableTarget(e.target)) {
+      return
+    }
+
+    const wantCtrl = combo.includes("ctrl+")
+    const wantShift = combo.includes("shift+")
+    const wantAlt = combo.includes("alt+")
+    const wantMeta = combo.includes("meta+")
+    const parts = combo.split("+")
+    const key = parts[parts.length - 1]
+
+    const keyMatches = (e.key || "").toLowerCase() === key
+    const modsMatch =
+      (!!e.ctrlKey === wantCtrl) &&
+      (!!e.shiftKey === wantShift) &&
+      (!!e.altKey === wantAlt) &&
+      (!!e.metaKey === wantMeta)
+
+    if (keyMatches && modsMatch) {
+      e.preventDefault()
+      this.setState((s) => ({ isTopbarVisible: !s.isTopbarVisible }))
+      return
+    }
+
+    if (e.key === "Escape" && this.state.isTopbarVisible) {
+      this.setState({ isTopbarVisible: false })
+    }
+  }
 
   getProxyUrl = () => {
     const { githubProxyUrl } = this.props.getConfigs()
@@ -562,6 +611,7 @@ class TopBar extends React.Component {
     let formOnSubmit = null
 
     const {
+      isTopbarVisible,
       githubToken,
       githubUser,
       showGistPicker,
@@ -573,6 +623,10 @@ class TopBar extends React.Component {
       gistOpening,
       lastSavedSpec,
     } = this.state
+
+    if (!isTopbarVisible) {
+      return null
+    }
 
     let saveButtonClass = "topbar-btn"
     if (currentGistId) {
