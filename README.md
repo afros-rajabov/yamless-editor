@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <a href="https://devfros.github.io/yamless-editor/"><strong>Use it online (free, no signup)</strong></a>
+  <a href="https://devfros.github.io/yamless-editor/" target="_blank"><strong>Use it online (free, no signup)</strong></a>
   &nbsp;·&nbsp;
   <a href="./LICENSE"><img src="https://img.shields.io/badge/license-Apache%202.0-3c9fd8?style=flat-square" alt="License" /></a>
 </p>
