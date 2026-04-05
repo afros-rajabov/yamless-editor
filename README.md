@@ -1,5 +1,5 @@
 <h1 align="center">
-  <a href="https://afros-rajabov.github.io/yamless-editor/">
+  <a href="https://devfros.github.io/yamless-editor/">
     <img src="src/standalone/plugins/top-bar/assets/logo_yamless.svg" alt="YAMLess" width="280" />
   </a>
 </h1>
@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <a href="https://afros-rajabov.github.io/yamless-editor/"><strong>Use it online (free, no signup)</strong></a>
+  <a href="https://devfros.github.io/yamless-editor/"><strong>Use it online (free, no signup)</strong></a>
   &nbsp;·&nbsp;
   <a href="./LICENSE"><img src="https://img.shields.io/badge/license-Apache%202.0-3c9fd8?style=flat-square" alt="License" /></a>
 </p>
